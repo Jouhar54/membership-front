@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../api/services'
+import { tokenStore } from '../api/client'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext(null)
@@ -10,67 +11,104 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
-  // Restore session on mount
+  // ── Restore session on mount ─────────────────────────────────────────────
+  // We verify with /auth/me rather than blindly trusting localStorage,
+  // which also lets the refresh-token interceptor silently renew if needed.
   useEffect(() => {
-    const token = localStorage.getItem('aalia_token')
-    const savedUser = localStorage.getItem('aalia_user')
-    if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser))
-      } catch {
-        localStorage.removeItem('aalia_token')
-        localStorage.removeItem('aalia_user')
-      }
+    const token = tokenStore.get()
+    if (!token) {
+      setLoading(false)
+      return
     }
-    setLoading(false)
+
+    authApi
+      .getMe()
+      .then((userData) => setUser(userData))
+      .catch(() => {
+        // Token expired / invalid and refresh also failed → clear everything
+        tokenStore.clear()
+        localStorage.removeItem('aalia_user')
+      })
+      .finally(() => setLoading(false))
   }, [])
 
-  const login = useCallback(async (credentials) => {
-    try {
-      const { user: userData, token, refreshToken } = await authApi.login(credentials)
-      localStorage.setItem('aalia_token', token)
-      localStorage.setItem('aalia_refresh_token', refreshToken)
-      localStorage.setItem('aalia_user', JSON.stringify(userData))
-      setUser(userData)
-      toast.success(`Welcome back, ${userData.fullName}!`)
+  // ── Login ────────────────────────────────────────────────────────────────
+  const login = useCallback(
+    async (credentials) => {
+      try {
+        const { user: userData, accessToken } = await authApi.login(credentials)
+        tokenStore.set(accessToken)
+        // Cache a lightweight copy so the avatar / name renders instantly on next load
+        localStorage.setItem('aalia_user', JSON.stringify(userData))
+        setUser(userData)
+        toast.success(`Welcome back, ${userData.fullName}!`)
 
-      // Redirect based on role
-      if (userData.role === 'admin' || userData.role === 'batch_admin') {
-        navigate('/admin/dashboard')
-      } else {
-        navigate('/dashboard')
+        if (userData.role === 'admin' || userData.role === 'batch_admin') {
+          navigate('/admin/dashboard')
+        } else {
+          navigate('/dashboard')
+        }
+        return userData
+      } catch (error) {
+        const msg =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          'Login failed. Please check your credentials.'
+        toast.error(msg)
+        throw error
       }
-      return userData
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed')
-      throw error
-    }
-  }, [navigate])
+    },
+    [navigate],
+  )
 
-  const register = useCallback(async (data) => {
+  // ── Register ─────────────────────────────────────────────────────────────
+  const register = useCallback(
+    async (data) => {
+      try {
+        const { user: userData, accessToken } = await authApi.register(data)
+        tokenStore.set(accessToken)
+        localStorage.setItem('aalia_user', JSON.stringify(userData))
+        setUser(userData)
+        toast.success('Registration successful! Welcome to AALIA.')
+        navigate('/dashboard')
+        return userData
+      } catch (error) {
+        const msg =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          'Registration failed. Please try again.'
+        toast.error(msg)
+        throw error
+      }
+    },
+    [navigate],
+  )
+
+  // ── Logout ───────────────────────────────────────────────────────────────
+  const logout = useCallback(async () => {
     try {
-      const { user: userData, token, refreshToken } = await authApi.register(data)
-      localStorage.setItem('aalia_token', token)
-      localStorage.setItem('aalia_refresh_token', refreshToken)
-      localStorage.setItem('aalia_user', JSON.stringify(userData))
-      setUser(userData)
-      toast.success('Registration successful!')
-      navigate('/dashboard')
-      return userData
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed')
-      throw error
+      await authApi.logout() // clears the httpOnly refreshToken cookie server-side
+    } catch {
+      // Ignore errors — we clear local state regardless
     }
-  }, [navigate])
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('aalia_token')
-    localStorage.removeItem('aalia_refresh_token')
+    tokenStore.clear()
     localStorage.removeItem('aalia_user')
     setUser(null)
     navigate('/login')
     toast.success('Logged out successfully')
   }, [navigate])
+
+  // ── Refresh user profile (call after profile update) ─────────────────────
+  const refreshUser = useCallback(async () => {
+    try {
+      const userData = await authApi.getMe()
+      localStorage.setItem('aalia_user', JSON.stringify(userData))
+      setUser(userData)
+      return userData
+    } catch (error) {
+      console.error('Failed to refresh user:', error)
+    }
+  }, [])
 
   const isAdmin = user?.role === 'admin'
   const isBatchAdmin = user?.role === 'batch_admin'
@@ -85,6 +123,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        refreshUser,
         isAdmin,
         isBatchAdmin,
         isMember,

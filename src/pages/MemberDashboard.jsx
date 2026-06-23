@@ -3,19 +3,45 @@ import {
   CheckCircle2, Clock, CreditCard, Image, Download,
   User, Mail, Phone, MapPin, GraduationCap, Calendar,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import Card, { CardHeader, CardTitle } from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Avatar from '../components/ui/Avatar'
 import Button from '../components/ui/Button'
+import { PageLoader } from '../components/ui/LoadingStates'
 import { useAuth } from '../context/AuthContext'
+import { membersApi } from '../api/services'
 import { formatDate, formatPhone } from '../utils'
-import { dummyUsers } from '../lib/dummyData'
-
-const memberData = dummyUsers.member
 
 export default function MemberDashboard() {
   const { user } = useAuth()
-  const member = { ...memberData, ...user }
+
+  // Fetch the current user's membership record(s) from the backend
+  const { data: memberships, isLoading } = useQuery({
+    queryKey: ['my-memberships'],
+    queryFn: membersApi.getMy,
+    enabled: !!user,
+  })
+
+  if (isLoading) return <PageLoader />
+
+  // Use the first membership (most recent if multiple)
+  const membership = memberships?.[0]
+
+  // Compose a merged view: auth user data + membership data
+  const member = {
+    fullName: user?.fullName || '—',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    district: user?.district || '',
+    batchName: membership?.batchName || user?.batchName || '—',
+    registeredAt: membership?.registeredAt || null,
+    approvedAt: membership?.approvedAt || null,
+    membershipStatus: membership?.membershipStatus || 'pending',
+    paymentStatus: membership?.paymentStatus || 'unpaid',
+    posterStatus: membership?.posterStatus || 'not_generated',
+    posterUrl: membership?.posterUrl || null,
+  }
 
   const statusSteps = [
     {
@@ -26,15 +52,33 @@ export default function MemberDashboard() {
     },
     {
       label: 'Payment',
-      status: member.paymentStatus === 'paid' || member.paymentStatus === 'verified' ? 'completed' : 'pending',
+      status:
+        member.paymentStatus === 'paid' || member.paymentStatus === 'verified'
+          ? 'completed'
+          : 'pending',
       icon: CreditCard,
-      detail: member.paymentStatus === 'paid' ? 'Paid' : member.paymentStatus === 'verified' ? 'Verified' : 'Awaiting',
+      detail:
+        member.paymentStatus === 'paid'
+          ? 'Paid'
+          : member.paymentStatus === 'verified'
+          ? 'Verified'
+          : 'Awaiting',
     },
     {
       label: 'Approval',
-      status: member.membershipStatus === 'approved' ? 'completed' : member.membershipStatus === 'rejected' ? 'rejected' : 'pending',
+      status:
+        member.membershipStatus === 'approved'
+          ? 'completed'
+          : member.membershipStatus === 'rejected'
+          ? 'rejected'
+          : 'pending',
       icon: CheckCircle2,
-      detail: member.membershipStatus === 'approved' ? 'Approved' : member.membershipStatus === 'rejected' ? 'Rejected' : 'Pending',
+      detail:
+        member.membershipStatus === 'approved'
+          ? 'Approved'
+          : member.membershipStatus === 'rejected'
+          ? 'Rejected'
+          : 'Pending',
     },
     {
       label: 'Poster',
@@ -43,6 +87,12 @@ export default function MemberDashboard() {
       detail: member.posterStatus === 'ready' ? 'Ready' : 'Pending',
     },
   ]
+
+  const handleDownloadPoster = () => {
+    if (member.posterUrl) {
+      window.open(member.posterUrl, '_blank')
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -89,16 +139,24 @@ export default function MemberDashboard() {
                     <StepIcon className="w-5 h-5" />
                   </div>
                   <p className="text-xs font-medium text-[var(--text-primary)]">{step.label}</p>
-                  <p className={`text-[11px] mt-0.5 ${
-                    isCompleted ? 'text-success' : isRejected ? 'text-error' : 'text-[var(--text-tertiary)]'
-                  }`}>
+                  <p
+                    className={`text-[11px] mt-0.5 ${
+                      isCompleted
+                        ? 'text-success'
+                        : isRejected
+                        ? 'text-error'
+                        : 'text-[var(--text-tertiary)]'
+                    }`}
+                  >
                     {step.detail}
                   </p>
                 </motion.div>
                 {idx < statusSteps.length - 1 && (
-                  <div className={`flex-1 h-[2px] mx-3 mt-[-20px] rounded-full ${
-                    isCompleted ? 'bg-success/30' : 'bg-[var(--border-color)]'
-                  }`} />
+                  <div
+                    className={`flex-1 h-[2px] mx-3 mt-[-20px] rounded-full ${
+                      isCompleted ? 'bg-success/30' : 'bg-[var(--border-color)]'
+                    }`}
+                  />
                 )}
               </div>
             )
@@ -131,7 +189,9 @@ export default function MemberDashboard() {
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-3 text-sm">
                 <item.icon className="w-4 h-4 text-[var(--text-tertiary)] flex-shrink-0" />
-                <span className="text-[var(--text-secondary)] w-20 flex-shrink-0">{item.label}</span>
+                <span className="text-[var(--text-secondary)] w-20 flex-shrink-0">
+                  {item.label}
+                </span>
                 <span className="text-[var(--text-primary)] font-medium">{item.value}</span>
               </div>
             ))}
@@ -148,20 +208,34 @@ export default function MemberDashboard() {
           {member.posterStatus === 'ready' ? (
             <div className="space-y-4">
               <div className="aspect-[3/4] bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-950/30 dark:to-primary-900/20 rounded-xl flex items-center justify-center border border-[var(--border-color)]">
-                <div className="text-center p-6">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-3">
-                    <Image className="w-8 h-8 text-primary-500" />
+                {member.posterUrl ? (
+                  <img
+                    src={member.posterUrl}
+                    alt="Membership Poster"
+                    className="h-full w-full object-contain rounded-xl"
+                  />
+                ) : (
+                  <div className="text-center p-6">
+                    <div className="w-16 h-16 mx-auto rounded-2xl bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-3">
+                      <Image className="w-8 h-8 text-primary-500" />
+                    </div>
+                    <p className="text-sm font-medium text-[var(--text-primary)] font-display">
+                      Poster Ready
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      Your membership poster has been generated
+                    </p>
                   </div>
-                  <p className="text-sm font-medium text-[var(--text-primary)] font-display">
-                    Poster Ready
-                  </p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">
-                    Your membership poster has been generated
-                  </p>
-                </div>
+                )}
               </div>
               <div className="flex gap-2">
-                <Button variant="primary" size="sm" icon={Download} className="flex-1">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={Download}
+                  className="flex-1"
+                  onClick={handleDownloadPoster}
+                >
                   Download
                 </Button>
                 <Button variant="secondary" size="sm" className="flex-1">
@@ -176,12 +250,10 @@ export default function MemberDashboard() {
               </div>
               <p className="text-sm font-medium text-[var(--text-primary)]">
                 {member.membershipStatus === 'approved'
-                  ? 'Poster is being generated...'
+                  ? 'Poster is being generated…'
                   : 'Poster will be generated after approval'}
               </p>
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
-                Please check back later
-              </p>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">Please check back later</p>
             </div>
           )}
         </Card>

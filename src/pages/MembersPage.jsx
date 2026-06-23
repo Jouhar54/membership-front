@@ -4,8 +4,7 @@ import {
   Search, Filter, CheckCircle2, XCircle, CreditCard,
   Eye, MoreHorizontal, Users,
 } from 'lucide-react'
-import { membersApi } from '../api/services'
-import { dummyBatches } from '../lib/dummyData'
+import { membersApi, batchesApi } from '../api/services'
 import Card, { CardHeader, CardTitle } from '../components/ui/Card'
 import DataTable from '../components/tables/DataTable'
 import Badge from '../components/ui/Badge'
@@ -30,6 +29,11 @@ export default function MembersPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['members', search, batchFilter, statusFilter],
     queryFn: () => membersApi.getAll({ search, batch: batchFilter, status: statusFilter }),
+  })
+
+  const { data: batches = [] } = useQuery({
+    queryKey: ['batches'],
+    queryFn: batchesApi.getAll,
   })
 
   const approveMutation = useMutation({
@@ -180,7 +184,7 @@ export default function MembersPage() {
           <div className="flex gap-3">
             <Select
               placeholder="All Batches"
-              options={dummyBatches.map((b) => ({ value: b.id, label: b.name }))}
+              options={batches.map((b) => ({ value: b.id, label: b.name }))}
               value={batchFilter}
               onChange={(e) => setBatchFilter(e.target.value)}
             />

@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { User, Mail, Phone, Lock, ArrowRight, Upload } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { registerSchema } from '../lib/validations'
 import { useAuth } from '../context/AuthContext'
+import { batchesApi } from '../api/services'
 import { DISTRICTS } from '../constants'
-import { dummyBatches } from '../lib/dummyData'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
@@ -15,6 +16,11 @@ export default function RegisterPage() {
   const { register: registerUser } = useAuth()
   const [loading, setLoading] = useState(false)
   const [photoPreview, setPhotoPreview] = useState(null)
+
+  const { data: batches = [] } = useQuery({
+    queryKey: ['batches'],
+    queryFn: batchesApi.getAll,
+  })
 
   const {
     register,
@@ -37,7 +43,10 @@ export default function RegisterPage() {
   const onSubmit = async (data) => {
     setLoading(true)
     try {
-      await registerUser(data)
+      // Map form fields to backend expected shape
+      // eslint-disable-next-line no-unused-vars
+      const { confirmPassword, batchId, ...rest } = data
+      await registerUser({ ...rest, batch: batchId })
     } catch {
       // handled in context
     } finally {
@@ -127,7 +136,7 @@ export default function RegisterPage() {
             label="Batch"
             error={errors.batchId?.message}
             placeholder="Select batch..."
-            options={dummyBatches.map((b) => ({ value: b.id, label: b.name }))}
+            options={batches.map((b) => ({ value: b.id, label: b.name }))}
             {...register('batchId')}
           />
 

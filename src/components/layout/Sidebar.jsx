@@ -3,13 +3,13 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Users, GraduationCap, ClipboardCheck,
-  User, Image, ChevronLeft, Menu, LogOut, X,
+  User, Image, ChevronLeft, Menu, LogOut, X, ShieldCheck,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { NAV_ITEMS } from '../../constants'
 
 const iconMap = {
-  LayoutDashboard, Users, GraduationCap, ClipboardCheck, User, Image,
+  LayoutDashboard, Users, GraduationCap, ClipboardCheck, User, Image, ShieldCheck,
 }
 
 export default function Sidebar() {

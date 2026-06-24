@@ -37,3 +37,31 @@ export const batchSchema = z.object({
     .regex(/^\d{4}$/, 'Must be a valid year'),
   description: z.string().optional(),
 })
+
+export const createBatchAdminSchema = z.object({
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .transform((val) => val.toUpperCase()),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  phone: z
+    .string()
+    .min(1, 'Phone is required')
+    .regex(/^[6-9]\d{9}$/, 'Valid 10-digit phone number is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  batchId: z.string().min(1, 'Please select a batch'),
+})
+
+export const editBatchAdminSchema = z.object({
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .transform((val) => val.toUpperCase()),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  phone: z
+    .string()
+    .min(1, 'Phone is required')
+    .regex(/^[6-9]\d{9}$/, 'Valid 10-digit phone number is required'),
+  batchId: z.string().min(1, 'Please select a batch'),
+})
+

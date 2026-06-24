@@ -37,11 +37,11 @@ export const NAV_ITEMS = {
   batch_admin: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: 'LayoutDashboard' },
     { label: 'Members', path: '/admin/members', icon: 'Users' },
-    { label: 'Batches', path: '/admin/batches', icon: 'GraduationCap' },
     { label: 'Approvals', path: '/admin/approvals', icon: 'ClipboardCheck' },
   ],
   admin: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: 'LayoutDashboard' },
+    { label: 'Batch Admins', path: '/admin/batch-admins', icon: 'ShieldCheck' },
     { label: 'Members', path: '/admin/members', icon: 'Users' },
     { label: 'Batches', path: '/admin/batches', icon: 'GraduationCap' },
     { label: 'Approvals', path: '/admin/approvals', icon: 'ClipboardCheck' },

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import toast from 'react-hot-toast'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'
 
@@ -50,6 +51,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
+
+    if (error.response?.status === 403) {
+      toast.error('You are not allowed')
+    }
 
     // Only attempt refresh on 401, and only once per request
     if (error.response?.status === 401 && !originalRequest._retry) {

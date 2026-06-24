@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import MemberDashboard from './pages/MemberDashboard'
 import AdminDashboard from './pages/AdminDashboard'
+import BatchAdmins from './pages/admin/BatchAdmins'
 import MembersPage from './pages/MembersPage'
 import BatchesPage from './pages/BatchesPage'
 import ApprovalsPage from './pages/ApprovalsPage'
@@ -49,6 +50,7 @@ export default function App() {
         }
       >
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/batch-admins" element={<BatchAdmins />} />
         <Route path="/admin/members" element={<MembersPage />} />
         <Route path="/admin/batches" element={<BatchesPage />} />
         <Route path="/admin/approvals" element={<ApprovalsPage />} />

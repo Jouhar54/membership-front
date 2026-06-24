@@ -16,8 +16,11 @@ import Modal from '../components/ui/Modal'
 import { ConfirmModal } from '../components/ui/Modal'
 import { PageLoader, EmptyState } from '../components/ui/LoadingStates'
 import toast from 'react-hot-toast'
+import { useAuth } from '../context/AuthContext'
 
 export default function BatchesPage() {
+  const { user } = useAuth()
+  const isBatchAdmin = user?.role === 'batch_admin'
   const [modalOpen, setModalOpen] = useState(false)
   const [editBatch, setEditBatch] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
@@ -28,6 +31,10 @@ export default function BatchesPage() {
     queryKey: ['batches'],
     queryFn: batchesApi.getAll,
   })
+
+  const filteredBatches = isBatchAdmin
+    ? (batches || []).filter((b) => b.id === user?.batchId)
+    : batches
 
   const createMutation = useMutation({
     mutationFn: batchesApi.create,
@@ -107,34 +114,38 @@ export default function BatchesPage() {
             Batches
           </h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Manage batches and generate join links
+            {isBatchAdmin ? 'View details of your assigned batch' : 'Manage batches and generate join links'}
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Plus}
-          onClick={() => { reset(); setModalOpen(true) }}
-        >
-          Create Batch
-        </Button>
+        {!isBatchAdmin && (
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Plus}
+            onClick={() => { reset(); setModalOpen(true) }}
+          >
+            Create Batch
+          </Button>
+        )}
       </div>
 
       {/* Batches Grid */}
-      {batches?.length === 0 ? (
+      {!filteredBatches || filteredBatches.length === 0 ? (
         <EmptyState
           icon={GraduationCap}
-          title="No batches yet"
-          description="Create your first batch to start organizing alumni groups"
+          title={isBatchAdmin ? 'No Assigned Batch' : 'No batches yet'}
+          description={isBatchAdmin ? 'You are not assigned to any batch as coordinator.' : 'Create your first batch to start organizing alumni groups'}
           action={
-            <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalOpen(true)}>
-              Create Batch
-            </Button>
+            !isBatchAdmin && (
+              <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalOpen(true)}>
+                Create Batch
+              </Button>
+            )
           }
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {batches?.map((batch, idx) => (
+          {filteredBatches.map((batch, idx) => (
             <motion.div
               key={batch.id}
               initial={{ opacity: 0, y: 20 }}
@@ -146,21 +157,23 @@ export default function BatchesPage() {
                   <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400">
                     <GraduationCap className="w-5 h-5" />
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      icon={Edit3}
-                      onClick={() => openEdit(batch)}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      icon={Trash2}
-                      className="text-error hover:text-error"
-                      onClick={() => setDeleteId(batch.id)}
-                    />
-                  </div>
+                  {!isBatchAdmin && (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        icon={Edit3}
+                        onClick={() => openEdit(batch)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        icon={Trash2}
+                        className="text-error hover:text-error"
+                        onClick={() => setDeleteId(batch.id)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <h3 className="font-semibold text-[var(--text-primary)] font-display mb-1">

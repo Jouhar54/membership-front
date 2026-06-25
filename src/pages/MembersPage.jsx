@@ -106,7 +106,7 @@ export default function MembersPage() {
       label: 'Name',
       render: (val, row) => (
         <div className="flex items-center gap-3">
-          <Avatar name={row.fullName} size="sm" />
+          <Avatar name={row.fullName} src={row.profilePhoto} size="sm" />
           <span className="font-medium text-[var(--text-primary)]">{row.fullName}</span>
         </div>
       ),
@@ -290,12 +290,12 @@ export default function MembersPage() {
         isOpen={!!viewApplication}
         onClose={() => setViewApplication(null)}
         title="Application details"
-        size="md"
+        size="lg"
       >
         {viewApplication && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <Avatar name={viewApplication.fullName} size="lg" />
+              <Avatar name={viewApplication.fullName} src={viewApplication.profilePhoto} size="lg" />
               <div>
                 <h3 className="font-semibold text-[var(--text-primary)] font-display">
                   {viewApplication.fullName}
@@ -304,11 +304,11 @@ export default function MembersPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
+              <div className="min-w-0">
                 <p className="text-[var(--text-tertiary)]">Email</p>
-                <p className="font-medium text-[var(--text-primary)]">{viewApplication.email}</p>
+                <p className="font-medium text-[var(--text-primary)] break-all">{viewApplication.email}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[var(--text-tertiary)]">Phone</p>
                 <p className="font-medium text-[var(--text-primary)]">{formatPhone(viewApplication.phone)}</p>
               </div>

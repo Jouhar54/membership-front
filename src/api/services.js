@@ -352,6 +352,7 @@ export function normaliseApplication(app) {
     batchId: batch._id || batch.id || app.batch,
     batchName: batch.batchName || app.batchName || '',
     batchCode: batch.batchCode || app.batchCode || '',
+    profilePhoto: app.profilePhoto || null,
     membershipStatus: app.membershipStatus || 'pending',
     paymentStatus: app.paymentStatus || 'pending',
     posterStatus: app.posterUrl ? 'ready' : (app.posterGenerated ? 'ready' : 'not_generated'),

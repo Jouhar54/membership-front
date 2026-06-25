@@ -65,6 +65,17 @@ export const editBatchAdminSchema = z.object({
   batchId: z.string().min(1, 'Please select a batch'),
 })
 
+export const cleanPhone = (val) => {
+  if (typeof val !== 'string') return val
+  let cleaned = val.replace(/\s+/g, '')
+  cleaned = cleaned.replace(/^\+91/, '')
+  if (cleaned.startsWith('91') && cleaned.length === 12) {
+    cleaned = cleaned.substring(2)
+  }
+  cleaned = cleaned.replace(/^0/, '')
+  return cleaned
+}
+
 export const applicationSchema = z.object({
   fullName: z
     .string()
@@ -72,15 +83,16 @@ export const applicationSchema = z.object({
     .transform((val) => val.toUpperCase()),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
   phone: z
-    .string()
-    .min(1, 'Phone is required')
-    .regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian phone number'),
+    .preprocess(
+      (val) => cleanPhone(val),
+      z.string().min(1, 'Phone is required').regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian phone number')
+    ),
   batchId: z.string().min(1, 'Please select a batch'),
   district: z.string().min(1, 'Please select a district'),
   profilePhoto: z.any().refine((file) => {
-    if (file instanceof FileList) return file.length > 0;
-    if (file instanceof File) return true;
-    return false;
+    if (file instanceof FileList) return file.length > 0
+    if (file instanceof File) return true
+    return false
   }, 'Profile photo is required'),
 })
 

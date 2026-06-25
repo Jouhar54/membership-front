@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Mail, Phone, Search, ArrowRight } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { applicationsApi } from '../api/services'
+import { cleanPhone } from '../lib/validations'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import toast from 'react-hot-toast'
@@ -36,7 +37,7 @@ export default function StatusCheckPage() {
 
   const checkMutation = useMutation({
     mutationFn: async (data) => {
-      const searchKey = data.email || data.phone
+      const searchKey = data.email || (data.phone ? cleanPhone(data.phone) : '')
       return await applicationsApi.checkStatus(searchKey)
     },
     onSuccess: (data) => {

@@ -1,21 +1,21 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { User, Mail, Phone, Lock, ArrowRight, Upload } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { registerSchema } from '../lib/validations'
-import { useAuth } from '../context/AuthContext'
-import { batchesApi } from '../api/services'
+import { User, Mail, Phone, Upload, CheckCircle2, ArrowRight } from 'lucide-react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { applicationSchema } from '../lib/validations'
+import { batchesApi, applicationsApi } from '../api/services'
 import { DISTRICTS } from '../constants'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
+import toast from 'react-hot-toast'
 
 export default function RegisterPage() {
-  const { register: registerUser } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
   const [photoPreview, setPhotoPreview] = useState(null)
+  const [submittedApp, setSubmittedApp] = useState(null)
 
   const { data: batches = [] } = useQuery({
     queryKey: ['batches'],
@@ -25,52 +25,112 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
-    watch,
   } = useForm({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(applicationSchema),
     defaultValues: {
       fullName: '',
       email: '',
-      phone: '+91',
-      password: '',
-      confirmPassword: '',
+      phone: '',
       batchId: '',
       district: '',
+      profilePhoto: undefined,
     },
   })
 
-  const onSubmit = async (data) => {
-    setLoading(true)
-    try {
-      // Map form fields to backend expected shape
-      // eslint-disable-next-line no-unused-vars
-      const { confirmPassword, batchId, ...rest } = data
-      await registerUser({ ...rest, batch: batchId })
-    } catch {
-      // handled in context
-    } finally {
-      setLoading(false)
-    }
-  }
+  const applyMutation = useMutation({
+    mutationFn: applicationsApi.create,
+    onSuccess: (data) => {
+      toast.success('Application submitted successfully!')
+      setSubmittedApp(data)
+    },
+    onError: (error) => {
+      const msg = error.response?.data?.message || error.message || 'Submission failed. Please try again.'
+      toast.error(msg)
+    },
+  })
 
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0]
     if (file) {
+      setValue('profilePhoto', file, { shouldValidate: true })
       const reader = new FileReader()
       reader.onload = (e) => setPhotoPreview(e.target.result)
       reader.readAsDataURL(file)
     }
   }
 
+  const handleNameChange = (e) => {
+    setValue('fullName', e.target.value.toUpperCase())
+  }
+
+  const onSubmit = (data) => {
+    applyMutation.mutate(data)
+  }
+
+  if (submittedApp) {
+    return (
+      <div className="text-center py-8 space-y-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-50 dark:bg-success-950/30 text-success mb-2">
+          <CheckCircle2 className="w-10 h-10" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] font-display">
+            Application Submitted!
+          </h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-sm mx-auto">
+            Thank you, <span className="font-semibold text-[var(--text-primary)]">{submittedApp.fullName}</span>. Your application for <span className="font-semibold text-[var(--text-primary)]">{submittedApp.batchName || 'the selected batch'}</span> has been successfully recorded.
+          </p>
+        </div>
+
+        <div className="bg-[var(--bg-tertiary)] p-4 rounded-2xl max-w-sm mx-auto text-left border border-[var(--border-color)] space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-[var(--text-tertiary)]">Status:</span>
+            <span className="font-semibold text-warning">Under Review</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[var(--text-tertiary)]">Email:</span>
+            <span className="text-[var(--text-secondary)]">{submittedApp.email}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[var(--text-tertiary)]">Phone:</span>
+            <span className="text-[var(--text-secondary)]">{submittedApp.phone}</span>
+          </div>
+        </div>
+
+        <div className="space-y-3 max-w-sm mx-auto pt-4">
+          <Button
+            variant="primary"
+            className="w-full"
+            onClick={() => navigate(`/status/${submittedApp.id}`)}
+            iconRight={ArrowRight}
+          >
+            View Live Status
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full text-xs"
+            onClick={() => {
+              setSubmittedApp(null)
+              setPhotoPreview(null)
+            }}
+          >
+            Submit Another Application
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-[var(--text-primary)] font-display">
-          Create your account
+          Membership Application
         </h2>
         <p className="text-sm text-[var(--text-secondary)] mt-1.5">
-          Join the AALIA alumni network today
+          Submit your application to join the AALIA Alumni network.
         </p>
       </div>
 
@@ -92,7 +152,7 @@ export default function RegisterPage() {
           </div>
           <div className="flex-1">
             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Profile Photo
+              Profile Photo <span className="text-error">*</span>
             </label>
             <input
               type="file"
@@ -100,6 +160,9 @@ export default function RegisterPage() {
               onChange={handlePhotoChange}
               className="text-sm text-[var(--text-secondary)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-950/50 dark:file:text-primary-400 hover:file:bg-primary-100 file:cursor-pointer cursor-pointer"
             />
+            {errors.profilePhoto && (
+              <p className="text-xs text-error mt-1">{errors.profilePhoto.message}</p>
+            )}
           </div>
         </div>
 
@@ -108,8 +171,7 @@ export default function RegisterPage() {
           icon={User}
           placeholder="Enter your full name"
           error={errors.fullName?.message}
-          style={{ textTransform: 'uppercase' }}
-          {...register('fullName')}
+          {...register('fullName', { onChange: handleNameChange })}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -125,7 +187,7 @@ export default function RegisterPage() {
           <Input
             label="Phone"
             icon={Phone}
-            placeholder="+91XXXXXXXXXX"
+            placeholder="9876543210"
             error={errors.phone?.message}
             {...register('phone')}
           />
@@ -149,41 +211,21 @@ export default function RegisterPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Password"
-            type="password"
-            icon={Lock}
-            placeholder="Min 6 characters"
-            error={errors.password?.message}
-            {...register('password')}
-          />
-
-          <Input
-            label="Confirm Password"
-            type="password"
-            icon={Lock}
-            placeholder="Re-enter password"
-            error={errors.confirmPassword?.message}
-            {...register('confirmPassword')}
-          />
-        </div>
-
         <Button
           type="submit"
-          loading={loading}
-          className="w-full"
+          loading={applyMutation.isPending}
+          className="w-full mt-2"
           size="lg"
           iconRight={ArrowRight}
         >
-          Create Account
+          Submit Application
         </Button>
       </form>
 
       <p className="text-sm text-center text-[var(--text-secondary)] mt-6">
-        Already have an account?{' '}
-        <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-          Sign in
+        Already applied?{' '}
+        <Link to="/status-check" className="text-primary-600 hover:text-primary-700 font-medium">
+          Check Application Status
         </Link>
       </p>
     </div>

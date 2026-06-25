@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Search, Filter, CheckCircle2, XCircle, CreditCard,
-  Eye, MoreHorizontal, Users,
+  Search, CheckCircle2, XCircle, CreditCard,
+  Eye, Users,
 } from 'lucide-react'
-import { membersApi, batchesApi } from '../api/services'
-import Card, { CardHeader, CardTitle } from '../components/ui/Card'
+import { applicationsApi, batchesApi } from '../api/services'
+import { useAuth } from '../context/AuthContext'
+import Card from '../components/ui/Card'
 import DataTable from '../components/tables/DataTable'
 import Badge from '../components/ui/Badge'
 import Avatar from '../components/ui/Avatar'
@@ -19,61 +20,94 @@ import { formatPhone, formatDate } from '../utils'
 import toast from 'react-hot-toast'
 
 export default function MembersPage() {
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [batchFilter, setBatchFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
-  const [viewMember, setViewMember] = useState(null)
+  const [viewApplication, setViewApplication] = useState(null)
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['members', search, batchFilter, statusFilter],
-    queryFn: () => membersApi.getAll({ search, batch: batchFilter, status: statusFilter }),
-  })
+  const isBatchAdmin = user?.role === 'batch_admin'
 
   const { data: batches = [] } = useQuery({
     queryKey: ['batches'],
     queryFn: batchesApi.getAll,
   })
 
+  // Set default batch filter depending on role
+  useEffect(() => {
+    if (isBatchAdmin && user?.batchId) {
+      setBatchFilter(user.batchId)
+    } else if (!isBatchAdmin && batches.length > 0 && !batchFilter) {
+      setBatchFilter(batches[0].id)
+    }
+  }, [user, batches, batchFilter, isBatchAdmin])
+
+  const { data: applications = [], isLoading } = useQuery({
+    queryKey: ['applications', batchFilter],
+    queryFn: () => {
+      if (!batchFilter) return []
+      return applicationsApi.getByBatch(batchFilter)
+    },
+    enabled: !!batchFilter,
+  })
+
   const approveMutation = useMutation({
-    mutationFn: membersApi.approve,
+    mutationFn: applicationsApi.approve,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['members'] })
-      toast.success('Member approved successfully')
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+      toast.success('Application approved and poster generated!')
       setConfirmAction(null)
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || err.message || 'Approval failed.')
     },
   })
 
   const rejectMutation = useMutation({
-    mutationFn: membersApi.reject,
+    mutationFn: applicationsApi.reject,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['members'] })
-      toast.success('Member rejected')
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+      toast.success('Application rejected.')
       setConfirmAction(null)
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || err.message || 'Rejection failed.')
     },
   })
 
   const markPaidMutation = useMutation({
-    mutationFn: membersApi.markPaid,
+    mutationFn: applicationsApi.markPaid,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['members'] })
-      toast.success('Payment marked as paid')
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+      toast.success('Payment marked as paid.')
       setConfirmAction(null)
     },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || err.message || 'Marking paid failed.')
+    },
+  })
+
+  // Filter application list client-side
+  const filteredApplications = applications.filter((app) => {
+    const q = search.toLowerCase()
+    const matchesSearch =
+      app.fullName.toLowerCase().includes(q) ||
+      app.email.toLowerCase().includes(q) ||
+      app.phone.includes(q)
+    const matchesStatus = statusFilter ? app.membershipStatus === statusFilter : true
+    return matchesSearch && matchesStatus
   })
 
   const columns = [
     {
       key: 'fullName',
-      label: 'Member',
+      label: 'Name',
       render: (val, row) => (
         <div className="flex items-center gap-3">
           <Avatar name={row.fullName} size="sm" />
-          <div>
-            <p className="font-medium text-[var(--text-primary)]">{row.fullName}</p>
-            <p className="text-xs text-[var(--text-tertiary)]">{row.email}</p>
-          </div>
+          <span className="font-medium text-[var(--text-primary)]">{row.fullName}</span>
         </div>
       ),
     },
@@ -85,6 +119,13 @@ export default function MembersPage() {
       ),
     },
     {
+      key: 'email',
+      label: 'Email',
+      render: (val) => (
+        <span className="text-[var(--text-secondary)]">{val}</span>
+      ),
+    },
+    {
       key: 'batchName',
       label: 'Batch',
       render: (val) => (
@@ -93,12 +134,12 @@ export default function MembersPage() {
     },
     {
       key: 'paymentStatus',
-      label: 'Payment',
+      label: 'Payment Status',
       render: (val) => <Badge variant={val} />,
     },
     {
       key: 'membershipStatus',
-      label: 'Status',
+      label: 'Membership Status',
       render: (val) => <Badge variant={val} />,
     },
     {
@@ -110,10 +151,10 @@ export default function MembersPage() {
             variant="ghost"
             size="xs"
             icon={Eye}
-            onClick={(e) => { e.stopPropagation(); setViewMember(row) }}
-            title="View profile"
+            onClick={(e) => { e.stopPropagation(); setViewApplication(row) }}
+            title="View Details"
           />
-          {row.paymentStatus === 'unpaid' && (
+          {row.paymentStatus === 'pending' && (
             <Button
               variant="ghost"
               size="xs"
@@ -122,7 +163,7 @@ export default function MembersPage() {
                 e.stopPropagation()
                 setConfirmAction({ type: 'pay', member: row })
               }}
-              title="Mark as paid"
+              title="Mark Paid"
             />
           )}
           {row.membershipStatus === 'pending' && (
@@ -163,10 +204,10 @@ export default function MembersPage() {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-[var(--text-primary)] font-display">
-          Members
+          Membership Applications
         </h1>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Manage all registered members
+          Manage all incoming applications and approval states
         </p>
       </div>
 
@@ -182,12 +223,14 @@ export default function MembersPage() {
             />
           </div>
           <div className="flex gap-3">
-            <Select
-              placeholder="All Batches"
-              options={batches.map((b) => ({ value: b.id, label: b.name }))}
-              value={batchFilter}
-              onChange={(e) => setBatchFilter(e.target.value)}
-            />
+            {!isBatchAdmin && (
+              <Select
+                placeholder="Select Batch"
+                options={batches.map((b) => ({ value: b.id, label: b.name }))}
+                value={batchFilter}
+                onChange={(e) => setBatchFilter(e.target.value)}
+              />
+            )}
             <Select
               placeholder="All Status"
               options={[
@@ -206,8 +249,8 @@ export default function MembersPage() {
       <Card padding={false}>
         <DataTable
           columns={columns}
-          data={data?.members || []}
-          emptyMessage="No members found matching your filters"
+          data={filteredApplications}
+          emptyMessage="No applications found matching your filters"
           emptyIcon={Users}
         />
       </Card>
@@ -218,14 +261,14 @@ export default function MembersPage() {
         onClose={() => setConfirmAction(null)}
         title={
           confirmAction?.type === 'approve'
-            ? 'Approve Member'
+            ? 'Approve Application'
             : confirmAction?.type === 'reject'
-            ? 'Reject Member'
+            ? 'Reject Application'
             : 'Mark as Paid'
         }
         message={
           confirmAction?.type === 'approve'
-            ? `Are you sure you want to approve ${confirmAction?.member?.fullName}?`
+            ? `Are you sure you want to approve ${confirmAction?.member?.fullName}? This will generate their member poster.`
             : confirmAction?.type === 'reject'
             ? `Are you sure you want to reject ${confirmAction?.member?.fullName}? This action cannot be undone.`
             : `Mark payment as received for ${confirmAction?.member?.fullName}?`
@@ -242,49 +285,55 @@ export default function MembersPage() {
         }}
       />
 
-      {/* View Member Modal */}
+      {/* View Details Modal */}
       <Modal
-        isOpen={!!viewMember}
-        onClose={() => setViewMember(null)}
-        title="Member Profile"
+        isOpen={!!viewApplication}
+        onClose={() => setViewApplication(null)}
+        title="Application details"
         size="md"
       >
-        {viewMember && (
+        {viewApplication && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <Avatar name={viewMember.fullName} size="lg" />
+              <Avatar name={viewApplication.fullName} size="lg" />
               <div>
                 <h3 className="font-semibold text-[var(--text-primary)] font-display">
-                  {viewMember.fullName}
+                  {viewApplication.fullName}
                 </h3>
-                <p className="text-sm text-[var(--text-secondary)]">{viewMember.batchName}</p>
+                <p className="text-sm text-[var(--text-secondary)]">{viewApplication.batchName}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-[var(--text-tertiary)]">Email</p>
-                <p className="font-medium text-[var(--text-primary)]">{viewMember.email}</p>
+                <p className="font-medium text-[var(--text-primary)]">{viewApplication.email}</p>
               </div>
               <div>
                 <p className="text-[var(--text-tertiary)]">Phone</p>
-                <p className="font-medium text-[var(--text-primary)]">{formatPhone(viewMember.phone)}</p>
+                <p className="font-medium text-[var(--text-primary)]">{formatPhone(viewApplication.phone)}</p>
               </div>
               <div>
                 <p className="text-[var(--text-tertiary)]">District</p>
-                <p className="font-medium text-[var(--text-primary)]">{viewMember.district}</p>
+                <p className="font-medium text-[var(--text-primary)]">{viewApplication.district}</p>
               </div>
               <div>
-                <p className="text-[var(--text-tertiary)]">Registered</p>
-                <p className="font-medium text-[var(--text-primary)]">{formatDate(viewMember.registeredAt)}</p>
+                <p className="text-[var(--text-tertiary)]">Submitted</p>
+                <p className="font-medium text-[var(--text-primary)]">{formatDate(viewApplication.registeredAt)}</p>
               </div>
               <div>
-                <p className="text-[var(--text-tertiary)]">Payment</p>
-                <Badge variant={viewMember.paymentStatus} />
+                <p className="text-[var(--text-tertiary)]">Payment Status</p>
+                <Badge variant={viewApplication.paymentStatus} />
               </div>
               <div>
-                <p className="text-[var(--text-tertiary)]">Membership</p>
-                <Badge variant={viewMember.membershipStatus} />
+                <p className="text-[var(--text-tertiary)]">Membership Status</p>
+                <Badge variant={viewApplication.membershipStatus} />
               </div>
+              {viewApplication.membershipId && (
+                <div>
+                  <p className="text-[var(--text-tertiary)]">Membership ID</p>
+                  <p className="font-medium text-success">{viewApplication.membershipId}</p>
+                </div>
+              )}
             </div>
           </div>
         )}

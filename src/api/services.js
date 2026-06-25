@@ -325,15 +325,104 @@ export const dashboardApi = {
 export const posterApi = {
   /** Get poster info from the membership record */
   getStatus: async (membershipId) => {
-    const membership = await membersApi.getById(membershipId)
+    const res = await apiClient.get(`/applications/${membershipId}`)
+    const app = unwrap(res)?.application || unwrap(res)
     return {
-      status: membership.posterStatus,
-      posterUrl: membership.posterUrl,
+      status: app.membershipStatus === 'approved' ? 'ready' : 'not_generated',
+      posterUrl: app.posterUrl,
     }
   },
 
   /** Download poster — returns a URL to open */
   getDownloadUrl: (membership) => {
     return membership?.posterUrl || null
+  },
+}
+
+// ─── Applications API ─────────────────────────────────────────────────────────
+export function normaliseApplication(app) {
+  if (!app) return null
+  const batch = app.batch || {}
+  return {
+    id: app._id || app.id,
+    fullName: app.fullName || '',
+    email: app.email || '',
+    phone: app.phone || '',
+    district: app.district || '',
+    batchId: batch._id || batch.id || app.batch,
+    batchName: batch.batchName || app.batchName || '',
+    batchCode: batch.batchCode || app.batchCode || '',
+    membershipStatus: app.membershipStatus || 'pending',
+    paymentStatus: app.paymentStatus || 'pending',
+    posterStatus: app.posterUrl ? 'ready' : (app.posterGenerated ? 'ready' : 'not_generated'),
+    posterUrl: app.posterUrl || null,
+    membershipId: app.membershipId || null,
+    registeredAt: app.createdAt || null,
+    approvedAt: app.approvedAt || null,
+  }
+}
+
+export const applicationsApi = {
+  /** POST /applications */
+  create: async (data) => {
+    const formData = new FormData()
+    formData.append('fullName', data.fullName)
+    formData.append('email', data.email)
+    formData.append('phone', data.phone)
+    formData.append('district', data.district || '')
+    formData.append('batchId', data.batchId)
+    if (data.profilePhoto) {
+      formData.append('profilePhoto', data.profilePhoto)
+    }
+
+    const res = await apiClient.post('/applications', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    const payload = unwrap(res)
+    return normaliseApplication(payload.application || payload)
+  },
+
+  /** POST /applications/status */
+  checkStatus: async (searchKey) => {
+    const res = await apiClient.post('/applications/status', { identifier: searchKey })
+    return unwrap(res)
+  },
+
+  /** GET /applications/:id */
+  getById: async (id) => {
+    const res = await apiClient.get(`/applications/${id}`)
+    const payload = unwrap(res)
+    return normaliseApplication(payload.application || payload)
+  },
+
+  /** GET /admin/applications/:batchId */
+  getByBatch: async (batchId) => {
+    const res = await apiClient.get(`/admin/applications/${batchId}`)
+    const payload = unwrap(res)
+    const list = Array.isArray(payload) ? payload : payload?.applications ?? []
+    return list.map(normaliseApplication)
+  },
+
+  /** PATCH /admin/applications/:id/mark-paid */
+  markPaid: async (id) => {
+    const res = await apiClient.patch(`/admin/applications/${id}/mark-paid`)
+    const payload = unwrap(res)
+    return normaliseApplication(payload.application || payload)
+  },
+
+  /** PATCH /admin/applications/:id/approve */
+  approve: async (id) => {
+    const res = await apiClient.patch(`/admin/applications/${id}/approve`)
+    const payload = unwrap(res)
+    return normaliseApplication(payload.application || payload)
+  },
+
+  /** PATCH /admin/applications/:id/reject */
+  reject: async (id) => {
+    const res = await apiClient.patch(`/admin/applications/${id}/reject`)
+    const payload = unwrap(res)
+    return normaliseApplication(payload.application || payload)
   },
 }

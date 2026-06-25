@@ -65,3 +65,22 @@ export const editBatchAdminSchema = z.object({
   batchId: z.string().min(1, 'Please select a batch'),
 })
 
+export const applicationSchema = z.object({
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .transform((val) => val.toUpperCase()),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  phone: z
+    .string()
+    .min(1, 'Phone is required')
+    .regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian phone number'),
+  batchId: z.string().min(1, 'Please select a batch'),
+  district: z.string().min(1, 'Please select a district'),
+  profilePhoto: z.any().refine((file) => {
+    if (file instanceof FileList) return file.length > 0;
+    if (file instanceof File) return true;
+    return false;
+  }, 'Profile photo is required'),
+})
+

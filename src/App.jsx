@@ -4,19 +4,19 @@ import AuthLayout from './components/layout/AuthLayout'
 import DashboardLayout from './components/layout/DashboardLayout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import MemberDashboard from './pages/MemberDashboard'
+import StatusCheckPage from './pages/StatusCheckPage'
+import StatusResultPage from './pages/StatusResultPage'
 import AdminDashboard from './pages/AdminDashboard'
 import BatchAdmins from './pages/admin/BatchAdmins'
 import MembersPage from './pages/MembersPage'
 import BatchesPage from './pages/BatchesPage'
 import ApprovalsPage from './pages/ApprovalsPage'
-import PosterPage from './pages/PosterPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
   return (
     <Routes>
-      {/* Public / Guest routes */}
+      {/* Admin/Batch Admin Login */}
       <Route
         element={
           <GuestRoute>
@@ -25,20 +25,13 @@ export default function App() {
         }
       >
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
       </Route>
 
-      {/* Member routes */}
-      <Route
-        element={
-          <ProtectedRoute allowedRoles={['member', 'admin', 'batch_admin']}>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/dashboard" element={<MemberDashboard />} />
-        <Route path="/profile" element={<MemberDashboard />} />
-        <Route path="/poster" element={<PosterPage />} />
+      {/* Public Membership Flow */}
+      <Route element={<AuthLayout />}>
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/status-check" element={<StatusCheckPage />} />
+        <Route path="/status/:id" element={<StatusResultPage />} />
       </Route>
 
       {/* Admin routes */}
@@ -57,7 +50,7 @@ export default function App() {
       </Route>
 
       {/* Redirects */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/register" replace />} />
 
       {/* 404 */}
       <Route path="*" element={<NotFoundPage />} />

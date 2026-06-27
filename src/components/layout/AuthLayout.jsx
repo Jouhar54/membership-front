@@ -19,8 +19,8 @@ export default function AuthLayout() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-8">
-              <span className="text-white font-bold text-2xl font-display">A</span>
+            <div className="w-14 h-14 rounded-2xl bg-white backdrop-blur-sm flex items-center justify-center mb-8">
+              <img src="/aalia-logo.png" alt="AALIA Logo" className='w-full h-full object-cover' />
             </div>
             <h1 className="text-4xl xl:text-5xl font-bold text-white font-display leading-tight">
               AALIA

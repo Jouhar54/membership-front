@@ -1,7 +1,7 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://membership-back-lquq.onrender.com/api/v1'
 
 // ── Axios instance ────────────────────────────────────────────────────────────
 const apiClient = axios.create({

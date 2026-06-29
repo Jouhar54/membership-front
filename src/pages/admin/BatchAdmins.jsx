@@ -13,6 +13,7 @@ import BatchAdminTable from '../../components/tables/BatchAdminTable'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Modal, { ConfirmModal } from '../../components/ui/Modal'
+import DeveloperCTA from '../../components/common/DeveloperCTA'
 
 export default function BatchAdmins() {
   const [search, setSearch] = useState('')
@@ -171,6 +172,9 @@ export default function BatchAdmins() {
           )}
         </div>
       )}
+
+      {/* Developer support CTA — admin only */}
+      <DeveloperCTA variant="admin" />
 
       {/* Create Modal */}
       <Modal

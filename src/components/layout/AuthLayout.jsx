@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import DeveloperCTA from '../common/DeveloperCTA'
 
 export default function AuthLayout() {
   return (
@@ -62,6 +63,9 @@ export default function AuthLayout() {
           </div>
 
           <Outlet />
+
+          {/* Developer branding footer — public pages only */}
+          <DeveloperCTA variant="footer" />
         </motion.div>
       </div>
     </div>

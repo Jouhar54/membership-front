@@ -10,6 +10,7 @@ import { DISTRICTS } from '../constants'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
+import DeveloperCTA from '../components/common/DeveloperCTA'
 import toast from 'react-hot-toast'
 
 export default function RegisterPage() {
@@ -119,6 +120,9 @@ export default function RegisterPage() {
             Submit Another Application
           </Button>
         </div>
+
+        {/* Developer lead-gen CTA — fades in after success screen */}
+        <DeveloperCTA variant="success" />
       </div>
     )
   }

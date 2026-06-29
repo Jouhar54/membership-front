@@ -14,6 +14,7 @@ import Button from '../components/ui/Button'
 import { PageLoader } from '../components/ui/LoadingStates'
 import { membersApi } from '../api/services'
 import { formatDate } from '../utils'
+import DeveloperCTA from '../components/common/DeveloperCTA'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
@@ -178,6 +179,9 @@ export default function AdminDashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Developer support CTA — admin only */}
+      <DeveloperCTA variant="admin" />
     </div>
   )
 }

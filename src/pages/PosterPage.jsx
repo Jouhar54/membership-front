@@ -112,6 +112,9 @@ export default function PosterPage() {
                   <p className="text-primary-300/60 text-[10px] tracking-wider uppercase">
                     AALIA Membership Campaign 2026
                   </p>
+                  <p className="text-white/20 text-[8px] tracking-wider mt-1">
+                    Powered by Jouhar
+                  </p>
                 </div>
               </div>
             </div>

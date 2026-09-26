@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { User, Mail, Phone, Upload, CheckCircle2, ArrowRight } from 'lucide-react'
+import { User, Phone, Upload, CheckCircle2, ArrowRight, Droplet, GraduationCap, MapPin } from 'lucide-react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { applicationSchema } from '../lib/validations'
 import { batchesApi, applicationsApi } from '../api/services'
-import { DISTRICTS } from '../constants'
+import { DISTRICTS, BLOOD_GROUPS } from '../constants'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
@@ -32,7 +32,7 @@ export default function RegisterPage() {
     resolver: zodResolver(applicationSchema),
     defaultValues: {
       fullName: '',
-      email: '',
+      bloodGroup: '',
       phone: '',
       batchId: '',
       district: '',
@@ -90,10 +90,12 @@ export default function RegisterPage() {
             <span className="text-[var(--text-tertiary)]">Status:</span>
             <span className="font-semibold text-warning">Under Review</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-[var(--text-tertiary)]">Email:</span>
-            <span className="text-[var(--text-secondary)]">{submittedApp.email}</span>
-          </div>
+          {submittedApp.bloodGroup && (
+            <div className="flex justify-between">
+              <span className="text-[var(--text-tertiary)]">Blood Group:</span>
+              <span className="text-[var(--text-secondary)] font-medium">{submittedApp.bloodGroup}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-[var(--text-tertiary)]">Phone:</span>
             <span className="text-[var(--text-secondary)]">{submittedApp.phone}</span>
@@ -180,26 +182,27 @@ export default function RegisterPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Email"
-            type="email"
-            icon={Mail}
-            placeholder="you@example.com"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-
-          <Input
             label="Phone"
             icon={Phone}
             placeholder="9876543210"
             error={errors.phone?.message}
             {...register('phone')}
           />
+
+          <Select
+            label="Blood Group"
+            icon={Droplet}
+            error={errors.bloodGroup?.message}
+            placeholder="Select blood group..."
+            options={BLOOD_GROUPS.map((bg) => ({ value: bg, label: bg }))}
+            {...register('bloodGroup')}
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Batch"
+            icon={GraduationCap}
             error={errors.batchId?.message}
             placeholder="Select batch..."
             options={batches.map((b) => ({ value: b.id, label: b.name }))}
@@ -208,6 +211,7 @@ export default function RegisterPage() {
 
           <Select
             label="District"
+            icon={MapPin}
             error={errors.district?.message}
             placeholder="Select district..."
             options={DISTRICTS.map((d) => ({ value: d, label: d }))}

@@ -40,6 +40,7 @@ export default function StatusResultPage() {
   const {
     fullName,
     email,
+    bloodGroup,
     phone,
     district,
     batchName,
@@ -112,10 +113,17 @@ export default function StatusResultPage() {
             <span className="block text-xs text-[var(--text-tertiary)] uppercase font-semibold">Batch</span>
             <span className="font-medium text-[var(--text-primary)]">{batchName}</span>
           </div>
-          <div>
-            <span className="block text-xs text-[var(--text-tertiary)] uppercase font-semibold">Email</span>
-            <span className="font-medium text-[var(--text-primary)] truncate block">{email}</span>
-          </div>
+          {bloodGroup ? (
+            <div>
+              <span className="block text-xs text-[var(--text-tertiary)] uppercase font-semibold">Blood Group</span>
+              <span className="font-medium text-[var(--text-primary)]">{bloodGroup}</span>
+            </div>
+          ) : email ? (
+            <div>
+              <span className="block text-xs text-[var(--text-tertiary)] uppercase font-semibold">Email</span>
+              <span className="font-medium text-[var(--text-primary)] truncate block">{email}</span>
+            </div>
+          ) : null}
           <div>
             <span className="block text-xs text-[var(--text-tertiary)] uppercase font-semibold">Phone</span>
             <span className="font-medium text-[var(--text-primary)]">{phone}</span>

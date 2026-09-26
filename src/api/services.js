@@ -347,6 +347,7 @@ export function normaliseApplication(app) {
     id: app._id || app.id,
     fullName: app.fullName || '',
     email: app.email || '',
+    bloodGroup: app.bloodGroup || '',
     phone: app.phone || '',
     district: app.district || '',
     batchId: batch._id || batch.id || app.batch,
@@ -368,7 +369,10 @@ export const applicationsApi = {
   create: async (data) => {
     const formData = new FormData()
     formData.append('fullName', data.fullName)
-    formData.append('email', data.email)
+    const cleanedPhone = (data.phone || '').replace(/\D/g, '').slice(-10)
+    const emailValue = data.email || `${cleanedPhone}@aalia.internal`
+    formData.append('email', emailValue)
+    if (data.bloodGroup) formData.append('bloodGroup', data.bloodGroup)
     formData.append('phone', data.phone)
     formData.append('district', data.district || '')
     formData.append('batchId', data.batchId)

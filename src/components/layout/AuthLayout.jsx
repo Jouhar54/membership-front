@@ -53,11 +53,11 @@ export default function AuthLayout() {
         >
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-              <span className="text-white font-bold text-lg font-display">A</span>
+            <div className="w-11 h-11 rounded-xl bg-white backdrop-blur-sm flex items-center justify-center p-1 border border-[var(--border-color)] shadow-sm overflow-hidden">
+              <img src="/aalia-logo.png" alt="AALIA Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="font-bold text-[var(--text-primary)] font-display text-xl">AALIA</h1>
+              <h1 className="font-bold text-[var(--text-primary)] font-display text-xl leading-tight">AALIA</h1>
               <p className="text-xs text-[var(--text-tertiary)]">Membership Portal</p>
             </div>
           </div>

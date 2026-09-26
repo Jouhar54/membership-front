@@ -24,8 +24,8 @@ export default function Sidebar() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-[var(--border-color)]">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm font-display">A</span>
+        <div className="w-9 h-9 rounded-xl bg-white backdrop-blur-sm flex items-center justify-center flex-shrink-0 p-1 border border-[var(--border-color)] shadow-sm overflow-hidden">
+          <img src="/aalia-logo.png" alt="AALIA Logo" className="w-full h-full object-contain" />
         </div>
         {!collapsed && (
           <motion.div

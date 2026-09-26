@@ -28,6 +28,10 @@ export const DISTRICTS = [
   'Malappuram', 'Kozhikode', 'Wayanad', 'Kannur', 'Kasaragod',
 ]
 
+export const BLOOD_GROUPS = [
+  'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-',
+]
+
 export const NAV_ITEMS = {
   member: [
     { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard' },

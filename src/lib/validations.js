@@ -81,7 +81,7 @@ export const applicationSchema = z.object({
     .string()
     .min(2, 'Full name must be at least 2 characters')
     .transform((val) => val.toUpperCase()),
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  bloodGroup: z.string().min(1, 'Please select a blood group'),
   phone: z
     .preprocess(
       (val) => cleanPhone(val),

@@ -119,10 +119,10 @@ export default function MembersPage() {
       ),
     },
     {
-      key: 'email',
-      label: 'Email',
-      render: (val) => (
-        <span className="text-[var(--text-secondary)]">{val}</span>
+      key: 'bloodGroup',
+      label: 'Blood Group',
+      render: (val, row) => (
+        <span className="text-[var(--text-secondary)] font-medium">{row.bloodGroup || '—'}</span>
       ),
     },
     {
@@ -304,10 +304,18 @@ export default function MembersPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="min-w-0">
-                <p className="text-[var(--text-tertiary)]">Email</p>
-                <p className="font-medium text-[var(--text-primary)] break-all">{viewApplication.email}</p>
-              </div>
+              {viewApplication.bloodGroup && (
+                <div>
+                  <p className="text-[var(--text-tertiary)]">Blood Group</p>
+                  <p className="font-medium text-[var(--text-primary)]">{viewApplication.bloodGroup}</p>
+                </div>
+              )}
+              {viewApplication.email && (
+                <div className="min-w-0">
+                  <p className="text-[var(--text-tertiary)]">Email</p>
+                  <p className="font-medium text-[var(--text-primary)] break-all">{viewApplication.email}</p>
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="text-[var(--text-tertiary)]">Phone</p>
                 <p className="font-medium text-[var(--text-primary)]">{formatPhone(viewApplication.phone)}</p>

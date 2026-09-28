@@ -59,61 +59,63 @@ export default function StatusCheckPage() {
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[var(--text-primary)] font-display">
-          Check Application Status
-        </h2>
-        <p className="text-sm text-[var(--text-secondary)] mt-1.5">
-          Enter your registered email or phone number to look up your application.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Input
-          label="Email Address"
-          type="email"
-          icon={Mail}
-          placeholder="Enter registered email"
-          error={errors.email?.message}
-          {...register('email')}
-        />
-
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-[var(--border-color)]"></div>
-          <span className="flex-shrink mx-4 text-xs text-[var(--text-tertiary)] uppercase font-semibold">OR</span>
-          <div className="flex-grow border-t border-[var(--border-color)]"></div>
+    <div className="h-full flex flex-col justify-center overflow-y-auto">
+      <div className="my-auto py-6">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] font-display">
+            Check Application Status
+          </h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-1.5">
+            Enter your registered email or phone number to look up your application.
+          </p>
         </div>
 
-        <Input
-          label="Phone Number"
-          icon={Phone}
-          placeholder="Enter registered phone number"
-          error={errors.phone?.message}
-          {...register('phone')}
-        />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Input
+            label="Email Address"
+            type="email"
+            icon={Mail}
+            placeholder="Enter registered email"
+            error={errors.email?.message}
+            {...register('email')}
+          />
 
-        {errors.email?.message && !errors.phone?.message && (
-          <p className="text-xs text-error">{errors.email.message}</p>
-        )}
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-[var(--border-color)]"></div>
+            <span className="flex-shrink mx-4 text-xs text-[var(--text-tertiary)] uppercase font-semibold">OR</span>
+            <div className="flex-grow border-t border-[var(--border-color)]"></div>
+          </div>
 
-        <Button
-          type="submit"
-          loading={checkMutation.isPending}
-          className="w-full mt-2"
-          size="lg"
-          iconRight={ArrowRight}
-        >
-          Check Status
-        </Button>
-      </form>
+          <Input
+            label="Phone Number"
+            icon={Phone}
+            placeholder="Enter registered phone number"
+            error={errors.phone?.message}
+            {...register('phone')}
+          />
 
-      <p className="text-sm text-center text-[var(--text-secondary)] mt-6">
-        Haven't applied yet?{' '}
-        <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-          Submit Application
-        </Link>
-      </p>
+          {errors.email?.message && !errors.phone?.message && (
+            <p className="text-xs text-error">{errors.email.message}</p>
+          )}
+
+          <Button
+            type="submit"
+            loading={checkMutation.isPending}
+            className="w-full mt-2"
+            size="lg"
+            iconRight={ArrowRight}
+          >
+            Check Status
+          </Button>
+        </form>
+
+        <p className="text-sm text-center text-[var(--text-secondary)] mt-6">
+          Haven't applied yet?{' '}
+          <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+            Submit Application
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }

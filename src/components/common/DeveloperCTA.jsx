@@ -22,7 +22,7 @@ export default function DeveloperCTA({ variant = 'footer' }) {
 ───────────────────────────────────────────────────────────────── */
 function FooterCTA() {
   return (
-    <div className="mt-10 pt-6 border-t border-[var(--border-color)]">
+    <div className="w-full">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Tagline */}
         <p className="text-xs text-[var(--text-tertiary)] text-center sm:text-left leading-relaxed max-w-xs">

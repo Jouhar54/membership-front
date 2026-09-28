@@ -32,6 +32,28 @@ export const BLOOD_GROUPS = [
   'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-',
 ]
 
+export const JOB_TYPES = [
+  'Mudaris',
+  'Qatheeb',
+  'Sadar',
+  'Muallim',
+  'School teacher',
+  'Others',
+]
+
+export const STATES = [
+  'Kerala',
+  'Tamil Nadu',
+  'Karnataka',
+  'Maharashtra',
+  'Delhi',
+  'Andhra Pradesh',
+  'Telangana',
+  'Goa',
+  'Gujarat',
+  'Others',
+]
+
 export const NAV_ITEMS = {
   member: [
     { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard' },

@@ -346,14 +346,30 @@ export function normaliseApplication(app) {
   return {
     id: app._id || app.id,
     fullName: app.fullName || '',
-    email: app.email || '',
+    fatherName: app.fatherName || '',
+    dob: app.dob || '',
     bloodGroup: app.bloodGroup || '',
+    houseName: app.houseName || '',
+    place: app.place || '',
+    post: app.post || '',
+    pin: app.pin || '',
+    whatsapp: app.whatsapp || '',
     phone: app.phone || '',
+    email: app.email || '',
     district: app.district || '',
+    state: app.state || 'Kerala',
+    panchayath: app.panchayath || '',
+    mandalam: app.mandalam || '',
+    thaluk: app.thaluk || '',
+    jobType: app.jobType || '',
+    jobTypeOther: app.jobTypeOther || '',
+    declarationAccepted: app.declarationAccepted || false,
+    declarationDate: app.declarationDate || '',
     batchId: batch._id || batch.id || app.batch,
     batchName: batch.batchName || app.batchName || '',
     batchCode: batch.batchCode || app.batchCode || '',
     profilePhoto: app.profilePhoto || null,
+    signature: app.signature || null,
     membershipStatus: app.membershipStatus || 'pending',
     paymentStatus: app.paymentStatus || 'pending',
     posterStatus: app.posterUrl ? 'ready' : (app.posterGenerated ? 'ready' : 'not_generated'),
@@ -369,15 +385,33 @@ export const applicationsApi = {
   create: async (data) => {
     const formData = new FormData()
     formData.append('fullName', data.fullName)
-    const cleanedPhone = (data.phone || '').replace(/\D/g, '').slice(-10)
-    const emailValue = data.email || `${cleanedPhone}@aalia.internal`
-    formData.append('email', emailValue)
+    if (data.fatherName) formData.append('fatherName', data.fatherName)
+    if (data.dob) formData.append('dob', data.dob)
     if (data.bloodGroup) formData.append('bloodGroup', data.bloodGroup)
+    if (data.houseName) formData.append('houseName', data.houseName)
+    if (data.place) formData.append('place', data.place)
+    if (data.post) formData.append('post', data.post)
+    if (data.pin) formData.append('pin', data.pin)
+    if (data.whatsapp) formData.append('whatsapp', data.whatsapp)
     formData.append('phone', data.phone)
-    formData.append('district', data.district || '')
+    formData.append('email', data.email)
     formData.append('batchId', data.batchId)
+    formData.append('district', data.district || '')
+    formData.append('state', data.state || 'Kerala')
+    if (data.panchayath) formData.append('panchayath', data.panchayath)
+    if (data.mandalam) formData.append('mandalam', data.mandalam)
+    if (data.thaluk) formData.append('thaluk', data.thaluk)
+    if (data.jobType) formData.append('jobType', data.jobType)
+    if (data.jobTypeOther) formData.append('jobTypeOther', data.jobTypeOther)
+    formData.append('declarationAccepted', String(!!data.declarationAccepted))
+    const todayStr = new Date().toISOString().split('T')[0]
+    formData.append('declarationDate', data.declarationDate || todayStr)
+
     if (data.profilePhoto) {
       formData.append('profilePhoto', data.profilePhoto)
+    }
+    if (data.signature) {
+      formData.append('signature', data.signature)
     }
 
     const res = await apiClient.post('/applications', formData, {

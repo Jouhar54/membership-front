@@ -81,18 +81,48 @@ export const applicationSchema = z.object({
     .string()
     .min(2, 'Full name must be at least 2 characters')
     .transform((val) => val.toUpperCase()),
+  fatherName: z.string().min(2, "Father's name is required"),
+  dob: z.string().min(1, 'Date of birth is required'),
   bloodGroup: z.string().min(1, 'Please select a blood group'),
+  houseName: z.string().min(1, 'House name is required'),
+  place: z.string().min(1, 'Place is required'),
+  post: z.string().min(1, 'Post office is required'),
+  pin: z
+    .string()
+    .min(1, 'PIN code is required')
+    .regex(/^\d{6}$/, 'PIN code must be exactly 6 digits'),
+  whatsapp: z
+    .preprocess(
+      (val) => cleanPhone(val),
+      z.string().min(1, 'WhatsApp number is required').regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit phone number')
+    ),
   phone: z
     .preprocess(
       (val) => cleanPhone(val),
-      z.string().min(1, 'Phone is required').regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian phone number')
+      z.string().min(1, 'Mobile number is required').regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian mobile number')
     ),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
   batchId: z.string().min(1, 'Please select a batch'),
   district: z.string().min(1, 'Please select a district'),
+  state: z.string().min(1, 'Please select/enter state'),
+  panchayath: z.string().min(1, 'Panchayath / Municipality is required'),
+  mandalam: z.string().min(1, 'Mandalam / Constituency is required'),
+  thaluk: z.string().min(1, 'Taluk / Thalukk is required'),
+  jobType: z.string().min(1, 'Please select a job type'),
+  jobTypeOther: z.string().optional(),
+  declarationAccepted: z
+    .boolean()
+    .refine((val) => val === true, 'You must accept the declaration to proceed'),
+  declarationDate: z.string().optional(),
   profilePhoto: z.any().refine((file) => {
     if (file instanceof FileList) return file.length > 0
     if (file instanceof File) return true
     return false
   }, 'Profile photo is required'),
+  signature: z.any().refine((file) => {
+    if (file instanceof FileList) return file.length > 0
+    if (file instanceof File) return true
+    return false
+  }, 'Signature image is required'),
 })
 

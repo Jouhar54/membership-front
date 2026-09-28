@@ -289,59 +289,159 @@ export default function MembersPage() {
       <Modal
         isOpen={!!viewApplication}
         onClose={() => setViewApplication(null)}
-        title="Application details"
+        title="Application Details"
         size="lg"
       >
         {viewApplication && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
+          <div className="space-y-5">
+            {/* Header with Photo */}
+            <div className="flex items-center gap-4 p-3 bg-[var(--bg-tertiary)]/60 rounded-xl border border-[var(--border-color)]">
               <Avatar name={viewApplication.fullName} src={viewApplication.profilePhoto} size="lg" />
-              <div>
-                <h3 className="font-semibold text-[var(--text-primary)] font-display">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-[var(--text-primary)] font-display text-lg truncate">
                   {viewApplication.fullName}
                 </h3>
-                <p className="text-sm text-[var(--text-secondary)]">{viewApplication.batchName}</p>
+                <p className="text-xs text-[var(--text-secondary)]">{viewApplication.batchName}</p>
+                <div className="flex gap-2 mt-1.5 flex-wrap">
+                  <Badge variant={viewApplication.membershipStatus} />
+                  <Badge variant={viewApplication.paymentStatus} />
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {viewApplication.bloodGroup && (
-                <div>
-                  <p className="text-[var(--text-tertiary)]">Blood Group</p>
-                  <p className="font-medium text-[var(--text-primary)]">{viewApplication.bloodGroup}</p>
+
+            {/* Personal & Contact Grid */}
+            <div className="space-y-4 text-xs">
+              <div>
+                <h4 className="font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wider text-[11px] text-primary-600 dark:text-primary-400">
+                  Personal & Academic Info
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[var(--bg-tertiary)]/30 p-3 rounded-xl border border-[var(--border-color)]">
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Father's Name</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.fatherName || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Date of Birth</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.dob ? formatDate(viewApplication.dob) : '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Blood Group</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.bloodGroup || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Job Type / Profession</span>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {viewApplication.jobType === 'Others' && viewApplication.jobTypeOther
+                        ? `Other (${viewApplication.jobTypeOther})`
+                        : viewApplication.jobType || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Batch</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.batchName || '—'}</span>
+                  </div>
+                  {viewApplication.membershipId && (
+                    <div>
+                      <span className="text-[var(--text-tertiary)] block">Membership ID</span>
+                      <span className="font-bold text-success">{viewApplication.membershipId}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-              {viewApplication.email && (
-                <div className="min-w-0">
-                  <p className="text-[var(--text-tertiary)]">Email</p>
-                  <p className="font-medium text-[var(--text-primary)] break-all">{viewApplication.email}</p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wider text-[11px] text-primary-600 dark:text-primary-400">
+                  Contact Information
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[var(--bg-tertiary)]/30 p-3 rounded-xl border border-[var(--border-color)]">
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Mobile (Mob)</span>
+                    <span className="font-medium text-[var(--text-primary)]">{formatPhone(viewApplication.phone)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">WhatsApp</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.whatsapp ? formatPhone(viewApplication.whatsapp) : '—'}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[var(--text-tertiary)] block">Email</span>
+                    <span className="font-medium text-[var(--text-primary)] break-all">{viewApplication.email || '—'}</span>
+                  </div>
                 </div>
-              )}
-              <div className="min-w-0">
-                <p className="text-[var(--text-tertiary)]">Phone</p>
-                <p className="font-medium text-[var(--text-primary)]">{formatPhone(viewApplication.phone)}</p>
               </div>
+
               <div>
-                <p className="text-[var(--text-tertiary)]">District</p>
-                <p className="font-medium text-[var(--text-primary)]">{viewApplication.district}</p>
-              </div>
-              <div>
-                <p className="text-[var(--text-tertiary)]">Submitted</p>
-                <p className="font-medium text-[var(--text-primary)]">{formatDate(viewApplication.registeredAt)}</p>
-              </div>
-              <div>
-                <p className="text-[var(--text-tertiary)]">Payment Status</p>
-                <Badge variant={viewApplication.paymentStatus} />
-              </div>
-              <div>
-                <p className="text-[var(--text-tertiary)]">Membership Status</p>
-                <Badge variant={viewApplication.membershipStatus} />
-              </div>
-              {viewApplication.membershipId && (
-                <div>
-                  <p className="text-[var(--text-tertiary)]">Membership ID</p>
-                  <p className="font-medium text-success">{viewApplication.membershipId}</p>
+                <h4 className="font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wider text-[11px] text-primary-600 dark:text-primary-400">
+                  Address & Local Body
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[var(--bg-tertiary)]/30 p-3 rounded-xl border border-[var(--border-color)]">
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">House Name</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.houseName || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Place</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.place || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Post Office</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.post || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">PIN Code</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.pin || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Panchayath</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.panchayath || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Mandalam</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.mandalam || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">Thalukk (Taluk)</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.thaluk || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">District</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.district || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">State</span>
+                    <span className="font-medium text-[var(--text-primary)]">{viewApplication.state || 'Kerala'}</span>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Declaration & Signature */}
+              <div>
+                <h4 className="font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wider text-[11px] text-primary-600 dark:text-primary-400">
+                  Declaration & Signature
+                </h4>
+                <div className="flex flex-col sm:flex-row gap-3 items-start bg-[var(--bg-tertiary)]/30 p-3 rounded-xl border border-[var(--border-color)]">
+                  <div className="flex-1 space-y-1">
+                    <p className="text-[var(--text-secondary)] italic">
+                      "I accept and agree to be bound by the bylaw of AALIA and Anvariyya."
+                    </p>
+                    <p className="text-[var(--text-tertiary)]">
+                      Declaration Date:{' '}
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {viewApplication.declarationDate ? formatDate(viewApplication.declarationDate) : formatDate(viewApplication.registeredAt)}
+                      </span>
+                    </p>
+                  </div>
+                  {viewApplication.signature && (
+                    <div className="flex-shrink-0">
+                      <span className="text-[var(--text-tertiary)] block mb-1">Signature:</span>
+                      <img
+                        src={viewApplication.signature}
+                        alt="Member Signature"
+                        className="h-12 w-auto max-w-[140px] rounded border border-[var(--border-color)] bg-white dark:bg-slate-900 object-contain p-1"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

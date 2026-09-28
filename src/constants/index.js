@@ -22,6 +22,16 @@ export const POSTER_STATUS = {
   READY: 'ready',
 }
 
+export const REJECTION_REASONS = [
+  'Invalid / Unclear Photograph',
+  'Invalid / Unclear Signature',
+  'Incorrect Batch Selected',
+  'Incomplete / Invalid Personal Details',
+  'Duplicate Application',
+  'Fee / Payment Discrepancy',
+  'Other',
+]
+
 export const DISTRICTS = [
   'Thiruvananthapuram', 'Kollam', 'Pathanamthitta', 'Alappuzha',
   'Kottayam', 'Idukki', 'Ernakulam', 'Thrissur', 'Palakkad',
@@ -67,9 +77,8 @@ export const NAV_ITEMS = {
   ],
   admin: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: 'LayoutDashboard' },
+    { label: 'Batches', path: '/admin/batches', icon: 'GraduationCap' },
     { label: 'Batch Admins', path: '/admin/batch-admins', icon: 'ShieldCheck' },
     { label: 'Members', path: '/admin/members', icon: 'Users' },
-    { label: 'Batches', path: '/admin/batches', icon: 'GraduationCap' },
-    { label: 'Approvals', path: '/admin/approvals', icon: 'ClipboardCheck' },
   ],
 }

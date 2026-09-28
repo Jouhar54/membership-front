@@ -48,6 +48,8 @@ export default function StatusResultPage() {
     membershipStatus,
     membershipId,
     posterUrl,
+    rejectionReason,
+    rejectedAt,
   } = application
 
   // Determine which status visual and message to display
@@ -58,8 +60,8 @@ export default function StatusResultPage() {
 
   if (membershipStatus === 'rejected') {
     statusIcon = <XCircle className="w-12 h-12 text-error" />
-    statusTitle = 'Rejected'
-    statusDescription = 'Application rejected'
+    statusTitle = 'Application Rejected'
+    statusDescription = 'Your application could not be approved at this time'
     statusColorClass = 'text-error bg-error-50 dark:bg-error-950/20'
   } else if (membershipStatus === 'approved') {
     statusIcon = <CheckCircle2 className="w-12 h-12 text-success" />
@@ -98,6 +100,36 @@ export default function StatusResultPage() {
           <p className="text-sm mt-1 opacity-90">{statusDescription}</p>
         </div>
       </div>
+
+      {/* Rejection Notice Card (If Rejected) */}
+      {membershipStatus === 'rejected' && (
+        <Card className="border-error/30 bg-error/5 space-y-3">
+          <div className="flex items-center gap-2 text-error font-semibold text-sm">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span>Reason for Rejection</span>
+          </div>
+          <div className="p-3 bg-[var(--bg-card)] rounded-xl border border-error/20 text-sm">
+            <p className="text-[var(--text-primary)] font-medium">
+              {rejectionReason || 'Application rejected by administration. Details or documents provided did not meet requirements.'}
+            </p>
+          </div>
+          <p className="text-xs text-[var(--text-secondary)]">
+            Please review the requirements, correct any issues, and submit a new application, or contact your batch coordinator for assistance.
+          </p>
+          <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+            <Link to="/register" className="flex-1">
+              <Button variant="primary" size="sm" className="w-full">
+                Submit New Application
+              </Button>
+            </Link>
+            <Link to="/status-check" className="flex-1">
+              <Button variant="secondary" size="sm" className="w-full">
+                Check Another Status
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      )}
 
       {/* Application Details Card */}
       <Card>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, CheckCircle2, XCircle, CreditCard,
-  Eye, Users,
+  Eye, Users, RotateCcw,
 } from 'lucide-react'
 import { applicationsApi, batchesApi } from '../api/services'
 import { useAuth } from '../context/AuthContext'
@@ -15,8 +15,9 @@ import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import { ConfirmModal } from '../components/ui/Modal'
 import Modal from '../components/ui/Modal'
+import RejectReasonModal from '../components/ui/RejectReasonModal'
 import { PageLoader } from '../components/ui/LoadingStates'
-import { formatPhone, formatDate } from '../utils'
+import { formatPhone, formatDate, cn } from '../utils'
 import toast from 'react-hot-toast'
 
 export default function MembersPage() {
@@ -24,6 +25,7 @@ export default function MembersPage() {
   const [search, setSearch] = useState('')
   const [batchFilter, setBatchFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
   const [viewApplication, setViewApplication] = useState(null)
   const queryClient = useQueryClient()
@@ -39,24 +41,25 @@ export default function MembersPage() {
   useEffect(() => {
     if (isBatchAdmin && user?.batchId) {
       setBatchFilter(user.batchId)
-    } else if (!isBatchAdmin && batches.length > 0 && !batchFilter) {
-      setBatchFilter(batches[0].id)
     }
-  }, [user, batches, batchFilter, isBatchAdmin])
+  }, [user, isBatchAdmin])
 
   const { data: applications = [], isLoading } = useQuery({
     queryKey: ['applications', batchFilter],
     queryFn: () => {
-      if (!batchFilter) return []
-      return applicationsApi.getByBatch(batchFilter)
+      if (isBatchAdmin && user?.batchId) {
+        return applicationsApi.getByBatch(user.batchId)
+      }
+      return applicationsApi.getByBatch(batchFilter || 'all')
     },
-    enabled: !!batchFilter,
   })
 
   const approveMutation = useMutation({
     mutationFn: applicationsApi.approve,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
       toast.success('Application approved and poster generated!')
       setConfirmAction(null)
     },
@@ -69,6 +72,8 @@ export default function MembersPage() {
     mutationFn: applicationsApi.reject,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
       toast.success('Application rejected.')
       setConfirmAction(null)
     },
@@ -81,6 +86,8 @@ export default function MembersPage() {
     mutationFn: applicationsApi.markPaid,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
       toast.success('Payment marked as paid.')
       setConfirmAction(null)
     },
@@ -89,15 +96,28 @@ export default function MembersPage() {
     },
   })
 
+  const hasActiveFilters = Boolean(
+    search || (!isBatchAdmin && batchFilter) || statusFilter || paymentFilter
+  )
+
+  const handleResetFilters = () => {
+    setSearch('')
+    if (!isBatchAdmin) setBatchFilter('')
+    setStatusFilter('')
+    setPaymentFilter('')
+  }
+
   // Filter application list client-side
   const filteredApplications = applications.filter((app) => {
-    const q = search.toLowerCase()
-    const matchesSearch =
-      app.fullName.toLowerCase().includes(q) ||
-      app.email.toLowerCase().includes(q) ||
-      app.phone.includes(q)
+    const q = search.toLowerCase().trim()
+    const matchesSearch = !q || (
+      app.fullName?.toLowerCase().includes(q) ||
+      app.email?.toLowerCase().includes(q) ||
+      app.phone?.includes(q)
+    )
     const matchesStatus = statusFilter ? app.membershipStatus === statusFilter : true
-    return matchesSearch && matchesStatus
+    const matchesPayment = paymentFilter ? app.paymentStatus === paymentFilter : true
+    return matchesSearch && matchesStatus && matchesPayment
   })
 
   const columns = [
@@ -140,7 +160,19 @@ export default function MembersPage() {
     {
       key: 'membershipStatus',
       label: 'Membership Status',
-      render: (val) => <Badge variant={val} />,
+      render: (val, row) => (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge variant={val} />
+          {row.membershipStatus === 'rejected' && row.rejectionReason && (
+            <span
+              className="text-[10px] text-error font-medium px-1.5 py-0.5 rounded bg-error/10 border border-error/20 max-w-[140px] truncate"
+              title={`Rejection Reason: ${row.rejectionReason}`}
+            >
+              {row.rejectionReason}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'actions',
@@ -154,7 +186,7 @@ export default function MembersPage() {
             onClick={(e) => { e.stopPropagation(); setViewApplication(row) }}
             title="View Details"
           />
-          {row.paymentStatus === 'pending' && (
+          {row.paymentStatus === 'pending' && row.membershipStatus !== 'rejected' && (
             <Button
               variant="ghost"
               size="xs"
@@ -172,12 +204,17 @@ export default function MembersPage() {
                 variant="ghost"
                 size="xs"
                 icon={CheckCircle2}
-                className="text-success hover:text-success"
+                disabled={row.paymentStatus !== 'paid'}
+                className={cn(
+                  'text-success hover:text-success',
+                  row.paymentStatus !== 'paid' && 'opacity-30 cursor-not-allowed hover:bg-transparent text-[var(--text-tertiary)] hover:text-[var(--text-tertiary)]'
+                )}
                 onClick={(e) => {
                   e.stopPropagation()
+                  if (row.paymentStatus !== 'paid') return
                   setConfirmAction({ type: 'approve', member: row })
                 }}
-                title="Approve"
+                title={row.paymentStatus === 'paid' ? 'Approve' : 'Payment must be marked as paid before approval'}
               />
               <Button
                 variant="ghost"
@@ -202,18 +239,27 @@ export default function MembersPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] font-display">
-          Membership Applications
-        </h1>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Manage all incoming applications and approval states
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] font-display">
+            Membership Applications
+          </h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            Manage all incoming applications and approval states
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] bg-[var(--bg-card)] px-3 py-1.5 rounded-xl border border-[var(--border-color)] self-start sm:self-auto shadow-sm">
+          <Users className="w-3.5 h-3.5 text-primary-500" />
+          <span>
+            Showing <strong className="text-[var(--text-primary)]">{filteredApplications.length}</strong> of{' '}
+            <strong className="text-[var(--text-primary)]">{applications.length}</strong> applications
+          </span>
+        </div>
       </div>
 
       {/* Filters */}
       <Card>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col lg:flex-row gap-3">
           <div className="flex-1">
             <Input
               icon={Search}
@@ -222,25 +268,52 @@ export default function MembersPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap sm:flex-nowrap gap-2.5 items-center">
             {!isBatchAdmin && (
-              <Select
-                placeholder="Select Batch"
-                options={batches.map((b) => ({ value: b.id, label: b.name }))}
-                value={batchFilter}
-                onChange={(e) => setBatchFilter(e.target.value)}
-              />
+              <div className="w-full sm:w-52 flex-shrink-0">
+                <Select
+                  placeholder="All Batches"
+                  options={batches.map((b) => ({ value: b.id, label: b.name }))}
+                  value={batchFilter}
+                  onChange={(e) => setBatchFilter(e.target.value)}
+                />
+              </div>
             )}
-            <Select
-              placeholder="All Status"
-              options={[
-                { value: 'pending', label: 'Pending' },
-                { value: 'approved', label: 'Approved' },
-                { value: 'rejected', label: 'Rejected' },
-              ]}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            />
+            <div className="w-full sm:w-36 flex-shrink-0">
+              <Select
+                placeholder="All Status"
+                options={[
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'approved', label: 'Approved' },
+                  { value: 'rejected', label: 'Rejected' },
+                ]}
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              />
+            </div>
+            <div className="w-full sm:w-36 flex-shrink-0">
+              <Select
+                placeholder="All Payment"
+                options={[
+                  { value: 'paid', label: 'Paid' },
+                  { value: 'pending', label: 'Pending' },
+                ]}
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value)}
+              />
+            </div>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={RotateCcw}
+                onClick={handleResetFilters}
+                className="text-xs text-[var(--text-secondary)] hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap"
+                title="Reset all filters"
+              >
+                Clear
+              </Button>
+            )}
           </div>
         </div>
       </Card>
@@ -250,37 +323,43 @@ export default function MembersPage() {
         <DataTable
           columns={columns}
           data={filteredApplications}
-          emptyMessage="No applications found matching your filters"
+          emptyMessage="No applications found matching your selected filters"
           emptyIcon={Users}
         />
       </Card>
 
-      {/* Confirm Modal */}
+      {/* Reject Reason Modal */}
+      <RejectReasonModal
+        isOpen={confirmAction?.type === 'reject'}
+        onClose={() => setConfirmAction(null)}
+        member={confirmAction?.member}
+        loading={rejectMutation.isPending}
+        onConfirm={({ id, reason }) => {
+          rejectMutation.mutate({ id, reason })
+        }}
+      />
+
+      {/* Confirm Modal for Approve / Mark Paid */}
       <ConfirmModal
-        isOpen={!!confirmAction}
+        isOpen={!!confirmAction && confirmAction.type !== 'reject'}
         onClose={() => setConfirmAction(null)}
         title={
           confirmAction?.type === 'approve'
             ? 'Approve Application'
-            : confirmAction?.type === 'reject'
-            ? 'Reject Application'
             : 'Mark as Paid'
         }
         message={
           confirmAction?.type === 'approve'
             ? `Are you sure you want to approve ${confirmAction?.member?.fullName}? This will generate their member poster.`
-            : confirmAction?.type === 'reject'
-            ? `Are you sure you want to reject ${confirmAction?.member?.fullName}? This action cannot be undone.`
             : `Mark payment as received for ${confirmAction?.member?.fullName}?`
         }
         confirmText={
-          confirmAction?.type === 'approve' ? 'Approve' : confirmAction?.type === 'reject' ? 'Reject' : 'Mark Paid'
+          confirmAction?.type === 'approve' ? 'Approve' : 'Mark Paid'
         }
-        variant={confirmAction?.type === 'reject' ? 'danger' : confirmAction?.type === 'approve' ? 'success' : 'primary'}
-        loading={approveMutation.isPending || rejectMutation.isPending || markPaidMutation.isPending}
+        variant={confirmAction?.type === 'approve' ? 'success' : 'primary'}
+        loading={approveMutation.isPending || markPaidMutation.isPending}
         onConfirm={() => {
           if (confirmAction?.type === 'approve') approveMutation.mutate(confirmAction.member.id)
-          if (confirmAction?.type === 'reject') rejectMutation.mutate(confirmAction.member.id)
           if (confirmAction?.type === 'pay') markPaidMutation.mutate(confirmAction.member.id)
         }}
       />
@@ -308,6 +387,27 @@ export default function MembersPage() {
                 </div>
               </div>
             </div>
+
+            {/* Rejection Details Banner if Rejected */}
+            {viewApplication.membershipStatus === 'rejected' && (
+              <div className="p-3 bg-error/10 border border-error/20 rounded-xl space-y-1">
+                <div className="flex items-center justify-between text-error font-semibold text-xs uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5">
+                    <XCircle className="w-3.5 h-3.5" />
+                    Application Rejected
+                  </span>
+                  {viewApplication.rejectedAt && (
+                    <span className="text-[var(--text-tertiary)] font-normal text-[11px] lowercase first-letter:uppercase">
+                      {formatDate(viewApplication.rejectedAt)}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[var(--text-primary)] mt-1">
+                  <span className="text-[var(--text-tertiary)] font-medium">Reason: </span>
+                  <span className="font-medium text-error">{viewApplication.rejectionReason || 'No specific reason provided'}</span>
+                </p>
+              </div>
+            )}
 
             {/* Personal & Contact Grid */}
             <div className="space-y-4 text-xs">

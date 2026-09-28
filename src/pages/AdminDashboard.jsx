@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   Users, UserCheck, Clock, CreditCard,
+  GraduationCap, ShieldCheck,
   TrendingUp, ArrowRight,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -45,7 +46,7 @@ export default function AdminDashboard() {
             Dashboard
           </h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Overview of membership campaign progress
+            Overview of membership campaign progress & system metrics
           </p>
         </div>
         <Button
@@ -58,35 +59,35 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Super Admin Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Members"
-          value={stats?.total || 0}
+          title="Total Memberships"
+          value={stats?.totalMemberships ?? stats?.total ?? 0}
           icon={Users}
           color="primary"
-          trendLabel="all time"
+          trendLabel="all applications"
         />
         <StatCard
-          title="Pending Approval"
-          value={stats?.pending || 0}
-          icon={Clock}
-          color="warning"
-          trendLabel="awaiting review"
-        />
-        <StatCard
-          title="Approved"
-          value={stats?.approved || 0}
+          title="Approved Memberships"
+          value={stats?.approvedMemberships ?? stats?.approved ?? 0}
           icon={UserCheck}
           color="success"
-          trendLabel="active members"
+          trendLabel={`${stats?.pendingMemberships || 0} pending review`}
         />
         <StatCard
-          title="Payments Received"
-          value={stats?.paid || 0}
-          icon={CreditCard}
+          title="Total Batches"
+          value={stats?.totalBatches ?? 0}
+          icon={GraduationCap}
           color="info"
-          trendLabel="verified payments"
+          trendLabel="active batches"
+        />
+        <StatCard
+          title="Total Users"
+          value={stats?.totalUsers ?? 0}
+          icon={ShieldCheck}
+          color="warning"
+          trendLabel="admins & coordinators"
         />
       </div>
 
@@ -105,28 +106,38 @@ export default function AdminDashboard() {
             </Button>
           </CardHeader>
           <div className="space-y-3">
-            {recentMembers?.map((member, idx) => (
-              <motion.div
-                key={member.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar name={member.fullName} size="sm" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-                      {member.fullName}
-                    </p>
-                    <p className="text-xs text-[var(--text-tertiary)]">
-                      {member.batchName} · {formatDate(member.registeredAt)}
-                    </p>
+            {!recentMembers || recentMembers.length === 0 ? (
+              <div className="py-8 text-center">
+                <Users className="w-8 h-8 text-[var(--text-tertiary)]/40 mx-auto mb-2" />
+                <p className="text-sm text-[var(--text-secondary)]">No registrations yet</p>
+                <p className="text-xs text-[var(--text-tertiary)]">New member submissions will appear here</p>
+              </div>
+            ) : (
+              recentMembers.map((member, idx) => (
+                <motion.div
+                  key={member.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="flex items-center justify-between p-3 rounded-xl hover:bg-[var(--bg-tertiary)] transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={member.fullName} size="sm" src={member.profilePhoto} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                        {member.fullName}
+                      </p>
+                      <p className="text-xs text-[var(--text-tertiary)] truncate">
+                        {[member.batchName, member.registeredAt ? formatDate(member.registeredAt) : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <Badge variant={member.membershipStatus} />
-              </motion.div>
-            ))}
+                  <Badge variant={member.membershipStatus} />
+                </motion.div>
+              ))
+            )}
           </div>
         </Card>
 

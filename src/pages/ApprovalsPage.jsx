@@ -9,6 +9,7 @@ import Badge from '../components/ui/Badge'
 import Avatar from '../components/ui/Avatar'
 import Button from '../components/ui/Button'
 import { ConfirmModal } from '../components/ui/Modal'
+import RejectReasonModal from '../components/ui/RejectReasonModal'
 import { PageLoader, EmptyState } from '../components/ui/LoadingStates'
 import { formatDate } from '../utils'
 import toast from 'react-hot-toast'
@@ -84,10 +85,14 @@ export default function ApprovalsPage() {
             variant="success"
             size="xs"
             icon={CheckCircle2}
+            disabled={row.paymentStatus !== 'paid'}
+            className={row.paymentStatus !== 'paid' ? 'opacity-40 cursor-not-allowed' : ''}
             onClick={(e) => {
               e.stopPropagation()
+              if (row.paymentStatus !== 'paid') return
               setConfirmAction({ type: 'approve', member: row })
             }}
+            title={row.paymentStatus === 'paid' ? 'Approve' : 'Payment required before approval'}
           >
             Approve
           </Button>
@@ -144,22 +149,28 @@ export default function ApprovalsPage() {
         )}
       </Card>
 
-      {/* Confirm Modal */}
-      <ConfirmModal
-        isOpen={!!confirmAction}
+      {/* Reject Reason Modal */}
+      <RejectReasonModal
+        isOpen={confirmAction?.type === 'reject'}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction?.type === 'approve' ? 'Approve Member' : 'Reject Member'}
-        message={
-          confirmAction?.type === 'approve'
-            ? `Approve ${confirmAction?.member?.fullName} as a member?`
-            : `Reject ${confirmAction?.member?.fullName}'s application? This cannot be undone.`
-        }
-        confirmText={confirmAction?.type === 'approve' ? 'Approve' : 'Reject'}
-        variant={confirmAction?.type === 'approve' ? 'success' : 'danger'}
-        loading={approveMutation.isPending || rejectMutation.isPending}
+        member={confirmAction?.member}
+        loading={rejectMutation.isPending}
+        onConfirm={({ id, reason }) => {
+          rejectMutation.mutate({ id, reason })
+        }}
+      />
+
+      {/* Confirm Modal for Approve */}
+      <ConfirmModal
+        isOpen={confirmAction?.type === 'approve'}
+        onClose={() => setConfirmAction(null)}
+        title="Approve Member"
+        message={`Approve ${confirmAction?.member?.fullName} as a member?`}
+        confirmText="Approve"
+        variant="success"
+        loading={approveMutation.isPending}
         onConfirm={() => {
           if (confirmAction?.type === 'approve') approveMutation.mutate(confirmAction.member.id)
-          if (confirmAction?.type === 'reject') rejectMutation.mutate(confirmAction.member.id)
         }}
       />
     </div>

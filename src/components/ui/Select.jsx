@@ -48,10 +48,12 @@ const Select = forwardRef(
       (opt) => String(opt.value) === String(internalValue)
     )
 
-    // Filter options if searchable
-    const filteredOptions = options.filter((opt) =>
-      opt.label?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    // Filter options if searchable (exclude empty value which is already represented by default top item)
+    const filteredOptions = options
+      .filter((opt) => opt.value !== '' && opt.value !== null && opt.value !== undefined)
+      .filter((opt) =>
+        opt.label?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
 
     // Close on click outside
     useEffect(() => {
@@ -213,7 +215,7 @@ const Select = forwardRef(
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.98 }}
                 transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute left-0 right-0 z-50 mt-1.5 overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] shadow-xl backdrop-blur-xl"
+                className="absolute left-0 min-w-full sm:min-w-[180px] w-max max-w-[320px] z-50 mt-1.5 overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] shadow-xl backdrop-blur-xl"
                 style={{
                   maxHeight: '320px',
                   boxShadow:

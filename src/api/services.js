@@ -39,8 +39,10 @@ function normaliseMembership(m) {
     paymentStatus: m.paymentStatus || 'unpaid',
     posterStatus: m.posterUrl ? 'ready' : (m.posterStatus || 'not_generated'),
     posterUrl: m.posterUrl || null,
+    rejectionReason: m.rejectionReason || user.rejectionReason || null,
     registeredAt: m.createdAt || m.registeredAt || null,
     approvedAt: m.approvedAt || null,
+    rejectedAt: m.rejectedAt || null,
   }
 }
 
@@ -201,7 +203,7 @@ export const membersApi = {
     const payload = unwrap(res)
     const list = Array.isArray(payload)
       ? payload
-      : payload?.memberships ?? payload?.pendingMemberships ?? []
+      : payload?.pending ?? payload?.memberships ?? payload?.pendingMemberships ?? []
     return list.map(normaliseMembership)
   },
 
@@ -209,26 +211,52 @@ export const membersApi = {
   getStats: async () => {
     const res = await apiClient.get('/dashboard/stats')
     const payload = unwrap(res)
-    // Backend: { totalUsers, totalBatches, totalMemberships, approvedMemberships }
-    // UI expects: { total, pending, approved, rejected, paid }
+    // Backend returns: { totalUsers, totalBatches, totalMemberships, approvedMemberships }
+    const totalMemberships = Number(payload?.totalMemberships ?? payload?.total ?? 0)
+    const approvedMemberships = Number(payload?.approvedMemberships ?? payload?.approved ?? 0)
+    const totalUsers = Number(payload?.totalUsers ?? 0)
+    const totalBatches = Number(payload?.totalBatches ?? 0)
+    const pendingMemberships = Number(
+      payload?.pendingMemberships ??
+        payload?.pending ??
+        Math.max(0, totalMemberships - approvedMemberships)
+    )
+    const paidMemberships = Number(payload?.paidMemberships ?? payload?.paid ?? 0)
+
     return {
-      total: payload.totalMemberships ?? payload.total ?? 0,
-      approved: payload.approvedMemberships ?? payload.approved ?? 0,
-      pending: payload.pendingMemberships ?? payload.pending ?? 0,
-      rejected: payload.rejectedMemberships ?? payload.rejected ?? 0,
-      paid: payload.paidMemberships ?? payload.paid ?? 0,
-      totalUsers: payload.totalUsers ?? 0,
-      totalBatches: payload.totalBatches ?? 0,
+      total: totalMemberships,
+      totalMemberships,
+      approved: approvedMemberships,
+      approvedMemberships,
+      pending: pendingMemberships,
+      pendingMemberships,
+      totalUsers,
+      totalBatches,
+      paid: paidMemberships,
+      paidMemberships,
     }
   },
 
-  /** GET /dashboard/stats — recent members (last 5 by date) */
+  /** GET /dashboard/recent — recent members (latest registrations by date) */
   getRecent: async () => {
+    try {
+      const res = await apiClient.get('/dashboard/recent')
+      const payload = unwrap(res)
+      const list = Array.isArray(payload)
+        ? payload
+        : payload?.recent ?? payload?.applications ?? []
+      if (Array.isArray(list) && list.length > 0) {
+        return list.map(normaliseMembership).slice(0, 5)
+      }
+    } catch {
+      // fallback if /dashboard/recent endpoint is not available
+    }
+
     const res = await apiClient.get('/dashboard/pending-memberships')
     const payload = unwrap(res)
     const list = Array.isArray(payload)
       ? payload
-      : payload?.memberships ?? payload?.pendingMemberships ?? []
+      : payload?.pending ?? payload?.memberships ?? payload?.pendingMemberships ?? []
     return list.map(normaliseMembership).slice(0, 5)
   },
 
@@ -239,8 +267,10 @@ export const membersApi = {
   },
 
   /** PATCH /memberships/:id/reject */
-  reject: async (id) => {
-    const res = await apiClient.patch(`/memberships/${id}/reject`)
+  reject: async (arg, reasonText) => {
+    const id = typeof arg === 'object' ? arg.id : arg
+    const reason = typeof arg === 'object' ? arg.reason : reasonText
+    const res = await apiClient.patch(`/memberships/${id}/reject`, reason ? { reason, rejectionReason: reason } : {})
     return unwrap(res)
   },
 
@@ -375,8 +405,10 @@ export function normaliseApplication(app) {
     posterStatus: app.posterUrl ? 'ready' : (app.posterGenerated ? 'ready' : 'not_generated'),
     posterUrl: app.posterUrl || null,
     membershipId: app.membershipId || null,
+    rejectionReason: app.rejectionReason || null,
     registeredAt: app.createdAt || null,
     approvedAt: app.approvedAt || null,
+    rejectedAt: app.rejectedAt || null,
   }
 }
 
@@ -436,9 +468,12 @@ export const applicationsApi = {
     return normaliseApplication(payload.application || payload)
   },
 
-  /** GET /admin/applications/:batchId */
-  getByBatch: async (batchId) => {
-    const res = await apiClient.get(`/admin/applications/${batchId}`)
+  /** GET /admin/applications/:batchId (or /admin/applications/all) with optional query params */
+  getByBatch: async (batchId, params = {}) => {
+    const endpoint = !batchId || batchId === 'all'
+      ? '/admin/applications/all'
+      : `/admin/applications/${batchId}`
+    const res = await apiClient.get(endpoint, { params })
     const payload = unwrap(res)
     const list = Array.isArray(payload) ? payload : payload?.applications ?? []
     return list.map(normaliseApplication)
@@ -459,8 +494,10 @@ export const applicationsApi = {
   },
 
   /** PATCH /admin/applications/:id/reject */
-  reject: async (id) => {
-    const res = await apiClient.patch(`/admin/applications/${id}/reject`)
+  reject: async (arg, reasonText) => {
+    const id = typeof arg === 'object' ? arg.id : arg
+    const reason = typeof arg === 'object' ? arg.reason : reasonText
+    const res = await apiClient.patch(`/admin/applications/${id}/reject`, reason ? { reason, rejectionReason: reason } : {})
     const payload = unwrap(res)
     return normaliseApplication(payload.application || payload)
   },

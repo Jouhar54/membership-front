@@ -23,6 +23,9 @@ import {
   Sparkles,
   ShieldCheck,
   Lock,
+  CreditCard,
+  Receipt,
+  X,
 } from 'lucide-react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { applicationSchema } from '../lib/validations'
@@ -39,6 +42,7 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const [photoPreview, setPhotoPreview] = useState(null)
   const [signaturePreview, setSignaturePreview] = useState(null)
+  const [paymentPreview, setPaymentPreview] = useState(null)
   const [submittedApp, setSubmittedApp] = useState(null)
 
   const todayStr = new Date().toISOString().split('T')[0]
@@ -80,6 +84,7 @@ export default function RegisterPage() {
       declarationDate: todayStr,
       profilePhoto: undefined,
       signature: undefined,
+      paymentScreenshot: undefined,
     },
   })
 
@@ -119,6 +124,21 @@ export default function RegisterPage() {
       reader.onload = (ev) => setSignaturePreview(ev.target.result)
       reader.readAsDataURL(file)
     }
+  }
+
+  const handlePaymentChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setValue('paymentScreenshot', file, { shouldValidate: true })
+      const reader = new FileReader()
+      reader.onload = (ev) => setPaymentPreview(ev.target.result)
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removePaymentScreenshot = () => {
+    setValue('paymentScreenshot', undefined, { shouldValidate: true })
+    setPaymentPreview(null)
   }
 
   const handleNameChange = (e) => {
@@ -210,6 +230,7 @@ export default function RegisterPage() {
               setSubmittedApp(null)
               setPhotoPreview(null)
               setSignaturePreview(null)
+              setPaymentPreview(null)
             }}
           >
             Submit Another Application
@@ -510,7 +531,71 @@ export default function RegisterPage() {
           )}
         </div>
 
-        {/* ─── SECTION 5: Declaration & Signature ────────────────── */}
+        {/* ─── SECTION 5: Payment Proof / Screenshot ──────────────── */}
+        <div className="bg-[var(--bg-primary)] p-4 sm:p-5 rounded-2xl border border-[var(--border-color)] space-y-4 shadow-sm">
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color)]">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+              <CreditCard className="w-4 h-4 text-primary-500" />
+              <span>Payment Screenshot</span>
+            </div>
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400">
+              Proof of Payment
+            </span>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-xs text-[var(--text-secondary)]">
+              Upload a screenshot or transaction receipt of your membership fee payment (UPI / GPay / PhonePe / Bank Transfer).
+            </p>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-3.5 bg-[var(--bg-tertiary)]/50 rounded-xl border border-[var(--border-color)]">
+              <div className="relative flex-shrink-0">
+                {paymentPreview ? (
+                  <div className="relative group">
+                    <img
+                      src={paymentPreview}
+                      alt="Payment Screenshot Preview"
+                      className="w-20 h-20 rounded-xl object-cover border-2 border-primary-500 shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePaymentScreenshot}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-error text-white flex items-center justify-center shadow-md hover:bg-error/90 transition-colors cursor-pointer"
+                      title="Remove image"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 rounded-xl bg-[var(--bg-primary)] border-2 border-dashed border-[var(--border-color)] flex flex-col items-center justify-center text-[var(--text-tertiary)]">
+                    <Receipt className="w-6 h-6 mb-1 text-primary-500/70" />
+                    <span className="text-[10px] font-medium">Receipt</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                  Upload Payment Screenshot / Receipt
+                </label>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">
+                  Attach screenshot showing transaction reference / UTR ID (JPG, PNG, WEBP).
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePaymentChange}
+                  className="text-xs text-[var(--text-secondary)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-950/60 dark:file:text-primary-300 hover:file:bg-primary-100 dark:hover:file:bg-primary-900/60 file:cursor-pointer cursor-pointer"
+                />
+                {errors.paymentScreenshot && (
+                  <p className="text-xs text-error mt-1">{errors.paymentScreenshot.message}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── SECTION 6: Declaration & Signature ────────────────── */}
         <div className="bg-[var(--bg-primary)] p-4 sm:p-5 rounded-2xl border border-[var(--border-color)] space-y-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] pb-2 border-b border-[var(--border-color)]">
             <FileCheck2 className="w-4 h-4 text-primary-500" />

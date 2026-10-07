@@ -400,6 +400,8 @@ export function normaliseApplication(app) {
     batchCode: batch.batchCode || app.batchCode || '',
     profilePhoto: app.profilePhoto || null,
     signature: app.signature || null,
+    paymentProof: app.paymentProof || app.paymentScreenshot || app.paymentReceipt || null,
+    paymentScreenshot: app.paymentScreenshot || app.paymentProof || null,
     membershipStatus: app.membershipStatus || 'pending',
     paymentStatus: app.paymentStatus || 'pending',
     posterStatus: app.posterUrl ? 'ready' : (app.posterGenerated ? 'ready' : 'not_generated'),
@@ -444,6 +446,10 @@ export const applicationsApi = {
     }
     if (data.signature) {
       formData.append('signature', data.signature)
+    }
+    if (data.paymentScreenshot) {
+      formData.append('paymentScreenshot', data.paymentScreenshot)
+      formData.append('paymentProof', data.paymentScreenshot)
     }
 
     const res = await apiClient.post('/applications', formData, {

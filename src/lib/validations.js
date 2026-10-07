@@ -124,5 +124,6 @@ export const applicationSchema = z.object({
     if (file instanceof File) return true
     return false
   }, 'Signature image is required'),
+  paymentScreenshot: z.any().optional(),
 })
 

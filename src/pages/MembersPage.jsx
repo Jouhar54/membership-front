@@ -513,6 +513,42 @@ export default function MembersPage() {
                 </div>
               </div>
 
+              {/* Payment Proof / Screenshot */}
+              {(viewApplication.paymentScreenshot || viewApplication.paymentProof) && (
+                <div>
+                  <h4 className="font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wider text-[11px] text-primary-600 dark:text-primary-400">
+                    Payment Proof / Screenshot
+                  </h4>
+                  <div className="flex flex-col sm:flex-row gap-3 items-center bg-[var(--bg-tertiary)]/30 p-3 rounded-xl border border-[var(--border-color)]">
+                    <a
+                      href={viewApplication.paymentScreenshot || viewApplication.paymentProof}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0"
+                    >
+                      <img
+                        src={viewApplication.paymentScreenshot || viewApplication.paymentProof}
+                        alt="Payment Screenshot"
+                        className="h-24 w-auto max-w-[160px] rounded-lg border border-[var(--border-color)] bg-white dark:bg-slate-900 object-contain p-1 shadow-sm hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <p className="text-xs text-[var(--text-primary)] font-medium">
+                        Payment receipt / transaction screenshot submitted by applicant.
+                      </p>
+                      <a
+                        href={viewApplication.paymentScreenshot || viewApplication.paymentProof}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline font-semibold"
+                      >
+                        Open Full Image &rarr;
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Declaration & Signature */}
               <div>
                 <h4 className="font-semibold text-[var(--text-primary)] mb-2 uppercase tracking-wider text-[11px] text-primary-600 dark:text-primary-400">

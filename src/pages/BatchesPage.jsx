@@ -195,7 +195,7 @@ export default function BatchesPage() {
                 </div>
 
                 {/* Join Link */}
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
+                {/* <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
                   <Link2 className="w-3.5 h-3.5 text-[var(--text-tertiary)] flex-shrink-0" />
                   <span className="text-xs text-[var(--text-secondary)] truncate flex-1 font-mono">
                     /join/{batch.joinCode}
@@ -207,7 +207,7 @@ export default function BatchesPage() {
                     onClick={() => handleCopyLink(batch)}
                     className={copiedLink === batch.id ? 'text-success' : ''}
                   />
-                </div>
+                </div> */}
               </Card>
             </motion.div>
           ))}

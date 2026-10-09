@@ -135,7 +135,7 @@ function AdminCTA() {
           </div>
           <div>
             <p className="text-sm font-semibold text-[var(--text-primary)]">
-              Need custom features or technical support?
+              Need technical support?
             </p>
             <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
               Platform developed by{' '}

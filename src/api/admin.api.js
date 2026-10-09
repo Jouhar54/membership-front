@@ -60,8 +60,11 @@ export const adminApi = {
   },
 
   /** DELETE /admin/batch-admins/:id */
-  deleteBatchAdmin: async (id) => {
-    const res = await apiClient.delete(`/admin/batch-admins/${id}`)
+  deleteBatchAdmin: async (payload) => {
+    const id = typeof payload === 'object' ? payload.id : payload
+    const password = typeof payload === 'object' ? payload.password : undefined
+    const config = password ? { data: { password } } : {}
+    const res = await apiClient.delete(`/admin/batch-admins/${id}`, config)
     return unwrap(res)
   },
 }

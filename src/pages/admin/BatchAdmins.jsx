@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Search, ShieldCheck, Mail, Phone, Calendar, GraduationCap } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { showApiErrorToast } from '../../utils'
 
 import {
   useBatchAdmins,
@@ -12,7 +13,7 @@ import BatchAdminForm from '../../components/forms/BatchAdminForm'
 import BatchAdminTable from '../../components/tables/BatchAdminTable'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
-import Modal, { ConfirmModal } from '../../components/ui/Modal'
+import Modal, { ConfirmModal, PasswordConfirmModal } from '../../components/ui/Modal'
 import DeveloperCTA from '../../components/common/DeveloperCTA'
 
 export default function BatchAdmins() {
@@ -35,16 +36,7 @@ export default function BatchAdmins() {
   const deleteMutation = useDeleteBatchAdmin()
 
   const handleMutationError = (err, fallback) => {
-    const errorData = err.response?.data
-    if (errorData?.errors && Array.isArray(errorData.errors)) {
-      errorData.errors.forEach((e) => {
-        toast.error(e.msg || e.message || 'Validation error')
-      })
-    } else if (errorData?.message) {
-      toast.error(errorData.message)
-    } else {
-      toast.error(fallback)
-    }
+    showApiErrorToast(err, fallback)
   }
 
   const handleCreateSubmit = (formData) => {
@@ -74,16 +66,19 @@ export default function BatchAdmins() {
     )
   }
 
-  const handleDeleteConfirm = () => {
-    deleteMutation.mutate(deletingAdmin.id, {
-      onSuccess: () => {
-        toast.success('Batch admin deleted successfully')
-        setDeletingAdmin(null)
-      },
-      onError: (err) => {
-        handleMutationError(err, 'Failed to delete batch admin')
-      },
-    })
+  const handleDeleteConfirm = (password) => {
+    deleteMutation.mutate(
+      { id: deletingAdmin.id, password },
+      {
+        onSuccess: () => {
+          toast.success('Batch admin deleted successfully')
+          setDeletingAdmin(null)
+        },
+        onError: (err) => {
+          handleMutationError(err, 'Failed to delete batch admin')
+        },
+      }
+    )
   }
 
   const handleSearchChange = (e) => {
@@ -287,15 +282,16 @@ export default function BatchAdmins() {
         )}
       </Modal>
 
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
+      {/* Password Protected Delete Confirmation Modal */}
+      <PasswordConfirmModal
         isOpen={!!deletingAdmin}
         onClose={() => setDeletingAdmin(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Batch Admin"
-        message={`Are you sure you want to delete ${deletingAdmin?.fullName}? This admin will lose access to the panel and their batch coordinator status will be updated.`}
+        message={`This will permanently delete admin access for ${deletingAdmin?.fullName}. Please enter your administrator password to authorize deletion.`}
+        itemName={deletingAdmin?.fullName}
+        itemType="Batch Admin"
         confirmText="Delete Admin"
-        variant="danger"
         loading={deleteMutation.isPending}
       />
     </div>

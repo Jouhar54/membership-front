@@ -11,7 +11,7 @@ import Button from '../components/ui/Button'
 import { ConfirmModal } from '../components/ui/Modal'
 import RejectReasonModal from '../components/ui/RejectReasonModal'
 import { PageLoader, EmptyState } from '../components/ui/LoadingStates'
-import { formatDate } from '../utils'
+import { formatDate, showApiErrorToast } from '../utils'
 import toast from 'react-hot-toast'
 
 export default function ApprovalsPage() {
@@ -31,6 +31,9 @@ export default function ApprovalsPage() {
       toast.success('Member approved successfully')
       setConfirmAction(null)
     },
+    onError: (err) => {
+      showApiErrorToast(err, 'Failed to approve member')
+    },
   })
 
   const rejectMutation = useMutation({
@@ -41,7 +44,11 @@ export default function ApprovalsPage() {
       toast.success('Member rejected')
       setConfirmAction(null)
     },
+    onError: (err) => {
+      showApiErrorToast(err, 'Failed to reject member')
+    },
   })
+
 
   const columns = [
     {

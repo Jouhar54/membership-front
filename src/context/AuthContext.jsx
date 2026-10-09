@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { authApi } from '../api/services'
 import { tokenStore } from '../api/client'
 import toast from 'react-hot-toast'
+import { showApiErrorToast } from '../utils'
 
 const AuthContext = createContext(null)
 
@@ -50,11 +51,7 @@ export function AuthProvider({ children }) {
         }
         return userData
       } catch (error) {
-        const msg =
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          'Login failed. Please check your credentials.'
-        toast.error(msg)
+        showApiErrorToast(error, 'Login failed. Please check your credentials.')
         throw error
       }
     },
@@ -73,11 +70,7 @@ export function AuthProvider({ children }) {
         navigate('/dashboard')
         return userData
       } catch (error) {
-        const msg =
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          'Registration failed. Please try again.'
-        toast.error(msg)
+        showApiErrorToast(error, 'Registration failed. Please try again.')
         throw error
       }
     },

@@ -37,6 +37,7 @@ import DatePicker from '../components/ui/DatePicker'
 import Button from '../components/ui/Button'
 import DeveloperCTA from '../components/common/DeveloperCTA'
 import toast from 'react-hot-toast'
+import { showApiErrorToast } from '../utils'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -98,11 +99,7 @@ export default function RegisterPage() {
       setSubmittedApp(data)
     },
     onError: (error) => {
-      const msg =
-        error.response?.data?.message ||
-        error.message ||
-        'Submission failed. Please try again.'
-      toast.error(msg)
+      showApiErrorToast(error, 'Submission failed. Please try again.')
     },
   })
 

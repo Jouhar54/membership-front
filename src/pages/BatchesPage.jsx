@@ -12,18 +12,18 @@ import { batchesApi } from '../api/services'
 import Card, { CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
-import Modal from '../components/ui/Modal'
-import { ConfirmModal } from '../components/ui/Modal'
+import Modal, { ConfirmModal, PasswordConfirmModal } from '../components/ui/Modal'
 import { PageLoader, EmptyState } from '../components/ui/LoadingStates'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
+import { showApiErrorToast } from '../utils'
 
 export default function BatchesPage() {
   const { user } = useAuth()
   const isBatchAdmin = user?.role === 'batch_admin'
   const [modalOpen, setModalOpen] = useState(false)
   const [editBatch, setEditBatch] = useState(null)
-  const [deleteId, setDeleteId] = useState(null)
+  const [deleteBatch, setDeleteBatch] = useState(null)
   const [copiedLink, setCopiedLink] = useState(null)
   const queryClient = useQueryClient()
 
@@ -44,6 +44,9 @@ export default function BatchesPage() {
       setModalOpen(false)
       reset()
     },
+    onError: (err) => {
+      showApiErrorToast(err, 'Failed to create batch')
+    },
   })
 
   const updateMutation = useMutation({
@@ -54,16 +57,23 @@ export default function BatchesPage() {
       setEditBatch(null)
       reset()
     },
+    onError: (err) => {
+      showApiErrorToast(err, 'Failed to update batch')
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: batchesApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batches'] })
-      toast.success('Batch deleted')
-      setDeleteId(null)
+      toast.success('Batch deleted successfully')
+      setDeleteBatch(null)
+    },
+    onError: (err) => {
+      showApiErrorToast(err, 'Failed to delete batch')
     },
   })
+
 
   const {
     register,
@@ -170,7 +180,7 @@ export default function BatchesPage() {
                         size="xs"
                         icon={Trash2}
                         className="text-error hover:text-error"
-                        onClick={() => setDeleteId(batch.id)}
+                        onClick={() => setDeleteBatch(batch)}
                       />
                     </div>
                   )}
@@ -263,16 +273,21 @@ export default function BatchesPage() {
         </form>
       </Modal>
 
-      {/* Delete Confirm */}
-      <ConfirmModal
-        isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
+      {/* Password Protected Delete Modal */}
+      <PasswordConfirmModal
+        isOpen={!!deleteBatch}
+        onClose={() => setDeleteBatch(null)}
         title="Delete Batch"
-        message="Are you sure you want to delete this batch? This action cannot be undone."
-        confirmText="Delete"
-        variant="danger"
+        message="This will permanently delete the batch. Please enter your administrator password to authorize deletion."
+        itemName={deleteBatch?.name}
+        itemType="Batch"
+        confirmText="Delete Batch"
         loading={deleteMutation.isPending}
-        onConfirm={() => deleteMutation.mutate(deleteId)}
+        onConfirm={(password) => {
+          if (deleteBatch) {
+            deleteMutation.mutate({ id: deleteBatch.id, password })
+          }
+        }}
       />
     </div>
   )

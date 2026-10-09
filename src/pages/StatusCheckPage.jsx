@@ -9,6 +9,7 @@ import { cleanPhone } from '../lib/validations'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import toast from 'react-hot-toast'
+import { showApiErrorToast } from '../utils'
 
 const statusCheckSchema = z
   .object({
@@ -49,8 +50,7 @@ export default function StatusCheckPage() {
       }
     },
     onError: (error) => {
-      const msg = error.response?.data?.message || error.message || 'Application not found.'
-      toast.error(msg)
+      showApiErrorToast(error, 'Application not found.')
     },
   })
 

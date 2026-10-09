@@ -332,8 +332,11 @@ export const batchesApi = {
   },
 
   /** DELETE /batches/:id */
-  delete: async (id) => {
-    const res = await apiClient.delete(`/batches/${id}`)
+  delete: async (payload) => {
+    const id = typeof payload === 'object' ? payload.id : payload
+    const password = typeof payload === 'object' ? payload.password : undefined
+    const config = password ? { data: { password } } : {}
+    const res = await apiClient.delete(`/batches/${id}`, config)
     return unwrap(res)
   },
 }

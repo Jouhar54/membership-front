@@ -17,7 +17,7 @@ import { ConfirmModal } from '../components/ui/Modal'
 import Modal from '../components/ui/Modal'
 import RejectReasonModal from '../components/ui/RejectReasonModal'
 import { PageLoader } from '../components/ui/LoadingStates'
-import { formatPhone, formatDate, cn } from '../utils'
+import { formatPhone, formatDate, cn, showApiErrorToast } from '../utils'
 import toast from 'react-hot-toast'
 
 export default function MembersPage() {
@@ -64,7 +64,7 @@ export default function MembersPage() {
       setConfirmAction(null)
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || err.message || 'Approval failed.')
+      showApiErrorToast(err, 'Approval failed.')
     },
   })
 
@@ -78,7 +78,7 @@ export default function MembersPage() {
       setConfirmAction(null)
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || err.message || 'Rejection failed.')
+      showApiErrorToast(err, 'Rejection failed.')
     },
   })
 
@@ -92,7 +92,7 @@ export default function MembersPage() {
       setConfirmAction(null)
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || err.message || 'Marking paid failed.')
+      showApiErrorToast(err, 'Marking paid failed.')
     },
   })
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -25,6 +25,7 @@ import {
   CreditCard,
   Receipt,
   X,
+  Crop,
 } from 'lucide-react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { applicationSchema } from '../lib/validations'
@@ -35,12 +36,17 @@ import Select from '../components/ui/Select'
 import DatePicker from '../components/ui/DatePicker'
 import Button from '../components/ui/Button'
 import DeveloperCTA from '../components/common/DeveloperCTA'
+import ImageCropModal from '../components/ui/ImageCropModal'
 import toast from 'react-hot-toast'
 import { showApiErrorToast } from '../utils'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const [photoPreview, setPhotoPreview] = useState(null)
+  const [rawPhotoSrc, setRawPhotoSrc] = useState(null)
+  const [photoFileName, setPhotoFileName] = useState('')
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false)
+  const fileInputRef = useRef(null)
   const [paymentPreview, setPaymentPreview] = useState(null)
   const [submittedApp, setSubmittedApp] = useState(null)
 
@@ -103,10 +109,29 @@ export default function RegisterPage() {
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0]
     if (file) {
-      setValue('profilePhoto', file, { shouldValidate: true })
+      setPhotoFileName(file.name)
       const reader = new FileReader()
-      reader.onload = (ev) => setPhotoPreview(ev.target.result)
+      reader.onload = (ev) => {
+        setRawPhotoSrc(ev.target.result)
+        setIsCropModalOpen(true)
+      }
       reader.readAsDataURL(file)
+      e.target.value = ''
+    }
+  }
+
+  const handleCropSave = (croppedFile, croppedPreviewUrl) => {
+    setValue('profilePhoto', croppedFile, { shouldValidate: true })
+    setPhotoPreview(croppedPreviewUrl)
+  }
+
+  const removePhoto = () => {
+    setValue('profilePhoto', undefined, { shouldValidate: true })
+    setPhotoPreview(null)
+    setRawPhotoSrc(null)
+    setPhotoFileName('')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -213,7 +238,8 @@ export default function RegisterPage() {
             onClick={() => {
               setSubmittedApp(null)
               setPhotoPreview(null)
-              setSignaturePreview(null)
+              setRawPhotoSrc(null)
+              setPhotoFileName('')
               setPaymentPreview(null)
             }}
           >
@@ -264,15 +290,30 @@ export default function RegisterPage() {
 
           {/* Profile Photo */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-[var(--bg-tertiary)]/50 p-3.5 rounded-xl border border-[var(--border-color)]">
-            <div className="relative flex-shrink-0">
+            <div className="relative flex-shrink-0 group">
               {photoPreview ? (
-                <img
-                  src={photoPreview}
-                  alt="Profile Preview"
-                  className="w-20 h-20 rounded-xl object-cover border-2 border-primary-500 shadow-sm"
-                />
+                <div className="relative">
+                  <img
+                    src={photoPreview}
+                    alt="Profile Preview"
+                    className="w-20 h-20 rounded-xl object-cover border-2 border-primary-500 shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsCropModalOpen(true)}
+                    className="absolute inset-0 bg-black/55 rounded-xl opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[11px] font-medium transition-opacity cursor-pointer backdrop-blur-[1px]"
+                    title="Crop / Adjust Photo"
+                  >
+                    <Crop className="w-4 h-4 mb-0.5" />
+                    <span>Crop</span>
+                  </button>
+                </div>
               ) : (
-                <div className="w-20 h-20 rounded-xl bg-[var(--bg-primary)] border-2 border-dashed border-[var(--border-color)] flex flex-col items-center justify-center text-[var(--text-tertiary)]">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-20 h-20 rounded-xl bg-[var(--bg-primary)] border-2 border-dashed border-[var(--border-color)] hover:border-primary-500/60 flex flex-col items-center justify-center text-[var(--text-tertiary)] hover:text-primary-600 transition-colors cursor-pointer"
+                  title="Choose Photo"
+                >
                   <Upload className="w-6 h-6 mb-1" />
                   <span className="text-[10px] font-medium">Photo</span>
                 </div>
@@ -285,12 +326,36 @@ export default function RegisterPage() {
               <p className="text-xs text-[var(--text-tertiary)] mb-2">
                 Clear passport-size photo for your ID card and poster.
               </p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="text-xs text-[var(--text-secondary)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-950/60 dark:file:text-primary-300 hover:file:bg-primary-100 dark:hover:file:bg-primary-900/60 file:cursor-pointer cursor-pointer"
-              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="text-xs text-[var(--text-secondary)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-950/60 dark:file:text-primary-300 hover:file:bg-primary-100 dark:hover:file:bg-primary-900/60 file:cursor-pointer cursor-pointer"
+                />
+                {photoPreview && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsCropModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] hover:bg-[var(--bg-tertiary)] text-xs font-semibold text-primary-600 dark:text-primary-400 transition-colors cursor-pointer shadow-xs"
+                    >
+                      <Crop className="w-3.5 h-3.5" />
+                      <span>Adjust Crop</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-error/10 text-xs font-medium text-error transition-colors cursor-pointer"
+                      title="Remove Photo"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                )}
+              </div>
               {errors.profilePhoto && (
                 <p className="text-xs text-error mt-1">{errors.profilePhoto.message}</p>
               )}
@@ -640,6 +705,15 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {/* Profile Photo Crop Modal */}
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        imageSrc={rawPhotoSrc}
+        fileName={photoFileName}
+        onClose={() => setIsCropModalOpen(false)}
+        onCropSave={handleCropSave}
+      />
     </div>
   )
 }

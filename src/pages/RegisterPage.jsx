@@ -15,7 +15,6 @@ import {
   Home,
   Mail,
   Briefcase,
-  FileSignature,
   FileCheck2,
   Building2,
   Landmark,
@@ -42,7 +41,6 @@ import { showApiErrorToast } from '../utils'
 export default function RegisterPage() {
   const navigate = useNavigate()
   const [photoPreview, setPhotoPreview] = useState(null)
-  const [signaturePreview, setSignaturePreview] = useState(null)
   const [paymentPreview, setPaymentPreview] = useState(null)
   const [submittedApp, setSubmittedApp] = useState(null)
 
@@ -84,7 +82,6 @@ export default function RegisterPage() {
       declarationAccepted: false,
       declarationDate: todayStr,
       profilePhoto: undefined,
-      signature: undefined,
       paymentScreenshot: undefined,
     },
   })
@@ -109,16 +106,6 @@ export default function RegisterPage() {
       setValue('profilePhoto', file, { shouldValidate: true })
       const reader = new FileReader()
       reader.onload = (ev) => setPhotoPreview(ev.target.result)
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const handleSignatureChange = (e) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setValue('signature', file, { shouldValidate: true })
-      const reader = new FileReader()
-      reader.onload = (ev) => setSignaturePreview(ev.target.result)
       reader.readAsDataURL(file)
     }
   }
@@ -592,11 +579,11 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* ─── SECTION 6: Declaration & Signature ────────────────── */}
+        {/* ─── SECTION 6: Declaration ──────────────────────────── */}
         <div className="bg-[var(--bg-primary)] p-4 sm:p-5 rounded-2xl border border-[var(--border-color)] space-y-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] pb-2 border-b border-[var(--border-color)]">
             <FileCheck2 className="w-4 h-4 text-primary-500" />
-            <span>Declaration & Signature</span>
+            <span>Declaration</span>
           </div>
 
           {/* Declaration Clause */}
@@ -613,43 +600,6 @@ export default function RegisterPage() {
             </label>
             {errors.declarationAccepted && (
               <p className="text-xs text-error mt-2 pl-7">{errors.declarationAccepted.message}</p>
-            )}
-          </div>
-
-          {/* Signature Upload */}
-          <div className="space-y-1.5 pt-1">
-            <label className="block text-sm font-medium text-[var(--text-secondary)]">
-              Signature <span className="text-error">*</span>
-            </label>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-[var(--bg-tertiary)]/40 rounded-xl border border-[var(--border-color)]">
-              <div className="relative flex-shrink-0">
-                {signaturePreview ? (
-                  <img
-                    src={signaturePreview}
-                    alt="Signature Preview"
-                    className="w-32 h-14 rounded-lg object-contain bg-white dark:bg-slate-900 border border-[var(--border-color)] p-1.5 shadow-sm"
-                  />
-                ) : (
-                  <div className="w-32 h-14 rounded-lg bg-[var(--bg-primary)] border border-dashed border-[var(--border-color)] flex flex-col items-center justify-center text-[var(--text-tertiary)]">
-                    <FileSignature className="w-5 h-5 mb-0.5" />
-                    <span className="text-[10px] font-medium">Signature</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleSignatureChange}
-                  className="text-xs text-[var(--text-secondary)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-950/60 dark:file:text-primary-300 hover:file:bg-primary-100 file:cursor-pointer cursor-pointer"
-                />
-                <p className="text-[11px] text-[var(--text-tertiary)] mt-1">
-                  Upload a photo or scanned copy of your signature
-                </p>
-              </div>
-            </div>
-            {errors.signature && (
-              <p className="text-xs text-error mt-1">{errors.signature.message}</p>
             )}
           </div>
         </div>

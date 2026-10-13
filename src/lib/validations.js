@@ -119,11 +119,7 @@ export const applicationSchema = z.object({
     if (file instanceof File) return true
     return false
   }, 'Profile photo is required'),
-  signature: z.any().refine((file) => {
-    if (file instanceof FileList) return file.length > 0
-    if (file instanceof File) return true
-    return false
-  }, 'Signature image is required'),
+  signature: z.any().optional(),
   paymentScreenshot: z.any().optional(),
 })
 

@@ -32,6 +32,8 @@ const Select = forwardRef(
 
     const [isOpen, setIsOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
+    const [placement, setPlacement] = useState('bottom') // 'bottom' or 'top'
+    const [dropdownMaxHeight, setDropdownMaxHeight] = useState(280)
     const [internalValue, setInternalValue] = useState(
       controlledValue !== undefined ? controlledValue : defaultValue
     )
@@ -54,6 +56,36 @@ const Select = forwardRef(
       .filter((opt) =>
         opt.label?.toLowerCase().includes(searchTerm.toLowerCase())
       )
+
+    // Smart placement detection: flip upward if not enough space below
+    useEffect(() => {
+      if (!isOpen) return
+
+      const updatePosition = () => {
+        if (!containerRef.current) return
+        const rect = containerRef.current.getBoundingClientRect()
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight
+        const spaceBelow = viewportHeight - rect.bottom
+        const spaceAbove = rect.top
+        const minHeightNeeded = 220
+
+        if (spaceBelow < minHeightNeeded && spaceAbove > spaceBelow) {
+          setPlacement('top')
+          setDropdownMaxHeight(Math.max(160, Math.min(320, spaceAbove - 24)))
+        } else {
+          setPlacement('bottom')
+          setDropdownMaxHeight(Math.max(160, Math.min(320, spaceBelow - 24)))
+        }
+      }
+
+      updatePosition()
+      window.addEventListener('resize', updatePosition)
+      window.addEventListener('scroll', updatePosition, true)
+      return () => {
+        window.removeEventListener('resize', updatePosition)
+        window.removeEventListener('scroll', updatePosition, true)
+      }
+    }, [isOpen])
 
     // Close on click outside
     useEffect(() => {
@@ -91,6 +123,9 @@ const Select = forwardRef(
       // Trigger change for React Hook Form / synthetic event
       if (hiddenSelectRef.current) {
         hiddenSelectRef.current.value = optionValue
+        try {
+          hiddenSelectRef.current.dispatchEvent(new Event('change', { bubbles: true }))
+        } catch {}
       }
 
       if (onChange) {
@@ -211,20 +246,31 @@ const Select = forwardRef(
           <AnimatePresence>
             {isOpen && (
               <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                initial={{
+                  opacity: 0,
+                  y: placement === 'top' ? 6 : -6,
+                  scale: 0.98,
+                }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                exit={{
+                  opacity: 0,
+                  y: placement === 'top' ? 6 : -6,
+                  scale: 0.98,
+                }}
                 transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute left-0 min-w-full sm:min-w-[180px] w-max max-w-[320px] z-50 mt-1.5 overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] shadow-xl backdrop-blur-xl"
+                className={cn(
+                  'absolute left-0 w-full min-w-full z-50 overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] shadow-2xl backdrop-blur-xl flex flex-col',
+                  placement === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                )}
                 style={{
-                  maxHeight: '320px',
+                  maxHeight: `${dropdownMaxHeight}px`,
                   boxShadow:
                     '0 12px 30px -4px rgba(0, 0, 0, 0.25), 0 4px 12px -2px rgba(0, 0, 0, 0.15)',
                 }}
               >
                 {/* Search Bar for dropdowns with several options */}
                 {showSearch && (
-                  <div className="p-2 border-b border-[var(--border-color)] sticky top-0 bg-[var(--bg-primary)]/90 backdrop-blur-md z-10">
+                  <div className="p-2 border-b border-[var(--border-color)] flex-shrink-0 bg-[var(--bg-primary)]/90 backdrop-blur-md z-10">
                     <div className="relative flex items-center">
                       <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--text-tertiary)] pointer-events-none" />
                       <input
@@ -252,7 +298,7 @@ const Select = forwardRef(
                 {/* Option List */}
                 <div
                   role="listbox"
-                  className="p-1.5 overflow-y-auto max-h-56 space-y-0.5 custom-scrollbar"
+                  className="p-1.5 overflow-y-auto flex-1 space-y-0.5 custom-scrollbar"
                 >
                   {/* Default / Unselect item */}
                   <button

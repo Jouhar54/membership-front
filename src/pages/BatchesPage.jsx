@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   Plus, Edit3, Trash2, Link2, Copy, Users,
   GraduationCap, Calendar, MoreHorizontal, Check,
+  Search, RotateCcw, X, ArrowUpDown,
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,6 +13,7 @@ import { batchesApi } from '../api/services'
 import Card, { CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
+import Select from '../components/ui/Select'
 import Modal, { ConfirmModal, PasswordConfirmModal } from '../components/ui/Modal'
 import { PageLoader, EmptyState } from '../components/ui/LoadingStates'
 import toast from 'react-hot-toast'
@@ -25,6 +27,13 @@ export default function BatchesPage() {
   const [editBatch, setEditBatch] = useState(null)
   const [deleteBatch, setDeleteBatch] = useState(null)
   const [copiedLink, setCopiedLink] = useState(null)
+
+  // Search, filter, and sort states
+  const [search, setSearch] = useState('')
+  const [yearFilter, setYearFilter] = useState('all')
+  const [memberFilter, setMemberFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('name-asc')
+
   const queryClient = useQueryClient()
 
   const { data: batches, isLoading } = useQuery({
@@ -32,9 +41,121 @@ export default function BatchesPage() {
     queryFn: batchesApi.getAll,
   })
 
-  const filteredBatches = isBatchAdmin
-    ? (batches || []).filter((b) => b.id === user?.batchId)
-    : batches
+  // Base list depending on user role
+  const baseBatches = useMemo(() => {
+    return isBatchAdmin
+      ? (batches || []).filter((b) => b.id === user?.batchId)
+      : (batches || [])
+  }, [batches, isBatchAdmin, user?.batchId])
+
+  // Extract unique years from batches for filtering
+  const availableYears = useMemo(() => {
+    if (!batches || !Array.isArray(batches)) return []
+    const yearsSet = new Set()
+    batches.forEach((b) => {
+      if (b.year && String(b.year).trim()) {
+        yearsSet.add(String(b.year).trim())
+      }
+      const match = (b.name || '').match(/\b(19\d\d|20\d\d)\b/)
+      if (match) {
+        yearsSet.add(match[0])
+      }
+    })
+    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+  }, [batches])
+
+  // Processed batches after search, filter, and sort
+  const processedBatches = useMemo(() => {
+    let list = [...baseBatches]
+
+    // 1. Search filter (name, year, description, batchCode)
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      list = list.filter((b) => {
+        const name = (b.name || '').toLowerCase()
+        const year = String(b.year || '').toLowerCase()
+        const desc = (b.description || '').toLowerCase()
+        const code = (b.batchCode || '').toLowerCase()
+        return name.includes(q) || year.includes(q) || desc.includes(q) || code.includes(q)
+      })
+    }
+
+    // 2. Year filter
+    if (yearFilter && yearFilter !== 'all') {
+      list = list.filter((b) => {
+        const yStr = String(b.year || '').trim()
+        const nameMatch = (b.name || '').match(/\b(19\d\d|20\d\d)\b/)
+        return yStr === yearFilter || (nameMatch && nameMatch[0] === yearFilter)
+      })
+    }
+
+    // 3. Member count filter
+    if (memberFilter === 'has-members') {
+      list = list.filter((b) => Number(b.memberCount || 0) > 0)
+    } else if (memberFilter === 'no-members') {
+      list = list.filter((b) => Number(b.memberCount || 0) === 0)
+    }
+
+    // 4. Sorting
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+        case 'name-desc':
+          return (b.name || '').localeCompare(a.name || '', undefined, { numeric: true, sensitivity: 'base' })
+        case 'year-desc': {
+          const getY = (item) => {
+            if (item.year && !isNaN(parseInt(item.year, 10))) return parseInt(item.year, 10)
+            const m = (item.name || '').match(/\b(19\d\d|20\d\d)\b/)
+            return m ? parseInt(m[0], 10) : 0
+          }
+          const diff = getY(b) - getY(a)
+          if (diff !== 0) return diff
+          return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+        }
+        case 'year-asc': {
+          const getY = (item) => {
+            if (item.year && !isNaN(parseInt(item.year, 10))) return parseInt(item.year, 10)
+            const m = (item.name || '').match(/\b(19\d\d|20\d\d)\b/)
+            return m ? parseInt(m[0], 10) : 0
+          }
+          const diff = getY(a) - getY(b)
+          if (diff !== 0) return diff
+          return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+        }
+        case 'members-desc': {
+          const mA = Number(a.memberCount || 0)
+          const mB = Number(b.memberCount || 0)
+          if (mB !== mA) return mB - mA
+          return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+        }
+        case 'members-asc': {
+          const mA = Number(a.memberCount || 0)
+          const mB = Number(b.memberCount || 0)
+          if (mA !== mB) return mA - mB
+          return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+        }
+        default:
+          return 0
+      }
+    })
+
+    return list
+  }, [baseBatches, search, yearFilter, memberFilter, sortBy])
+
+  const hasActiveFilters = Boolean(
+    search.trim() ||
+    (yearFilter && yearFilter !== 'all') ||
+    (memberFilter && memberFilter !== 'all') ||
+    sortBy !== 'name-asc'
+  )
+
+  const handleResetFilters = () => {
+    setSearch('')
+    setYearFilter('all')
+    setMemberFilter('all')
+    setSortBy('name-asc')
+  }
 
   const createMutation = useMutation({
     mutationFn: batchesApi.create,
@@ -127,20 +248,31 @@ export default function BatchesPage() {
             {isBatchAdmin ? 'View details of your assigned batch' : 'Manage batches and generate join links'}
           </p>
         </div>
-        {!isBatchAdmin && (
-          <Button
-            variant="primary"
-            size="sm"
-            icon={Plus}
-            onClick={() => { reset(); setModalOpen(true) }}
-          >
-            Create Batch
-          </Button>
-        )}
+        <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+          {baseBatches.length > 0 && (
+            <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] bg-[var(--bg-card)] px-3 py-1.5 rounded-xl border border-[var(--border-color)] shadow-sm">
+              <Users className="w-3.5 h-3.5 text-primary-500" />
+              <span>
+                Showing <strong className="text-[var(--text-primary)]">{processedBatches.length}</strong> of{' '}
+                <strong className="text-[var(--text-primary)]">{baseBatches.length}</strong> batches
+              </span>
+            </div>
+          )}
+          {!isBatchAdmin && (
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              onClick={() => { reset(); setModalOpen(true) }}
+            >
+              Create Batch
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Batches Grid */}
-      {!filteredBatches || filteredBatches.length === 0 ? (
+      {/* Batches Content */}
+      {!baseBatches || baseBatches.length === 0 ? (
         <EmptyState
           icon={GraduationCap}
           title={isBatchAdmin ? 'No Assigned Batch' : 'No batches yet'}
@@ -154,74 +286,187 @@ export default function BatchesPage() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredBatches.map((batch, idx) => (
-            <motion.div
-              key={batch.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-            >
-              <Card hover className="h-full">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400">
-                    <GraduationCap className="w-5 h-5" />
-                  </div>
-                  {!isBatchAdmin && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        icon={Edit3}
-                        onClick={() => openEdit(batch)}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        icon={Trash2}
-                        className="text-error hover:text-error"
-                        onClick={() => setDeleteBatch(batch)}
-                      />
-                    </div>
-                  )}
-                </div>
+        <>
+          {/* Search, Filter & Sort Bar */}
+          <Card>
+            <div className="flex flex-col lg:flex-row gap-3">
+              {/* Search input with clear button */}
+              <div className="relative flex-1">
+                <Input
+                  icon={Search}
+                  placeholder="Search batches by name, year, or description..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className={search ? 'pr-9' : ''}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors p-1"
+                    title="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
 
-                <h3 className="font-semibold text-[var(--text-primary)] font-display mb-1">
-                  {batch.name}
-                </h3>
-                {batch.description && (
-                  <p className="text-xs text-[var(--text-secondary)] mb-3 line-clamp-2">
-                    {batch.description}
-                  </p>
+              {/* Filters & Sort */}
+              <div className="flex flex-wrap sm:flex-nowrap gap-2.5 items-center">
+                {/* Year Filter */}
+                {availableYears.length > 0 && (
+                  <div className="w-full sm:w-36 flex-shrink-0">
+                    <Select
+                      icon={Calendar}
+                      placeholder="All Years"
+                      options={[
+                        { value: 'all', label: 'All Years' },
+                        ...availableYears.map((y) => ({ value: y, label: `Year ${y}` })),
+                      ]}
+                      value={yearFilter}
+                      onChange={(e) => setYearFilter(e.target.value)}
+                    />
+                  </div>
                 )}
 
-                <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)] mb-4">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" /> {batch.year}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5" /> {batch.memberCount} members
-                  </span>
+                {/* Member Count Filter */}
+                <div className="w-full sm:w-44 flex-shrink-0">
+                  <Select
+                    icon={Users}
+                    placeholder="All Batches"
+                    options={[
+                      { value: 'all', label: 'All Batches' },
+                      { value: 'has-members', label: 'With Members' },
+                      { value: 'no-members', label: 'No Members' },
+                    ]}
+                    value={memberFilter}
+                    onChange={(e) => setMemberFilter(e.target.value)}
+                  />
                 </div>
 
-                {/* Join Link */}
-                {/* <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
-                  <Link2 className="w-3.5 h-3.5 text-[var(--text-tertiary)] flex-shrink-0" />
-                  <span className="text-xs text-[var(--text-secondary)] truncate flex-1 font-mono">
-                    /join/{batch.joinCode}
-                  </span>
+                {/* Sort Dropdown */}
+                <div className="w-full sm:w-48 flex-shrink-0">
+                  <Select
+                    icon={ArrowUpDown}
+                    placeholder="Sort by"
+                    options={[
+                      { value: 'name-asc', label: 'Name (A to Z)' },
+                      { value: 'name-desc', label: 'Name (Z to A)' },
+                      { value: 'year-desc', label: 'Year (Newest)' },
+                      { value: 'year-asc', label: 'Year (Oldest)' },
+                      { value: 'members-desc', label: 'Members (High to Low)' },
+                      { value: 'members-asc', label: 'Members (Low to High)' },
+                    ]}
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  />
+                </div>
+
+                {/* Clear Filters Button */}
+                {hasActiveFilters && (
                   <Button
                     variant="ghost"
-                    size="xs"
-                    icon={copiedLink === batch.id ? Check : Copy}
-                    onClick={() => handleCopyLink(batch)}
-                    className={copiedLink === batch.id ? 'text-success' : ''}
-                  />
-                </div> */}
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+                    size="sm"
+                    icon={RotateCcw}
+                    onClick={handleResetFilters}
+                    className="text-xs text-[var(--text-secondary)] hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap"
+                    title="Reset all filters"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* Batches Grid or No Matches State */}
+          {processedBatches.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No matching batches found"
+              description="No batches match your current search and filter criteria. Try clearing some filters or searching for something else."
+              action={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={RotateCcw}
+                  onClick={handleResetFilters}
+                >
+                  Clear Filters
+                </Button>
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {processedBatches.map((batch, idx) => (
+                <motion.div
+                  key={batch.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                >
+                  <Card hover className="h-full">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400">
+                        <GraduationCap className="w-5 h-5" />
+                      </div>
+                      {!isBatchAdmin && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            icon={Edit3}
+                            onClick={() => openEdit(batch)}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            icon={Trash2}
+                            className="text-error hover:text-error"
+                            onClick={() => setDeleteBatch(batch)}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <h3 className="font-semibold text-[var(--text-primary)] font-display mb-1">
+                      {batch.name}
+                    </h3>
+                    {batch.description && (
+                      <p className="text-xs text-[var(--text-secondary)] mb-3 line-clamp-2">
+                        {batch.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)] mb-4">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" /> {batch.year}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" /> {batch.memberCount} members
+                      </span>
+                    </div>
+
+                    {/* Join Link */}
+                    {/* <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
+                      <Link2 className="w-3.5 h-3.5 text-[var(--text-tertiary)] flex-shrink-0" />
+                      <span className="text-xs text-[var(--text-secondary)] truncate flex-1 font-mono">
+                        /join/{batch.joinCode}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        icon={copiedLink === batch.id ? Check : Copy}
+                        onClick={() => handleCopyLink(batch)}
+                        className={copiedLink === batch.id ? 'text-success' : ''}
+                      />
+                    </div> */}
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Create/Edit Modal */}

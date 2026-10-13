@@ -15,7 +15,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -28,7 +28,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: 'spring', duration: 0.3, bounce: 0.1 }}
-            className={`relative w-full ${sizeClasses[size]} bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-[var(--shadow-xl)] z-10`}
+            className={`relative w-full ${sizeClasses[size]} bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-[var(--shadow-xl)] z-10 my-auto`}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-color)]">

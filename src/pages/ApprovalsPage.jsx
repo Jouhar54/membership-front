@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { CheckCircle2, XCircle, Clock, Users, Filter } from 'lucide-react'
-import { membersApi } from '../api/services'
+import { applicationsApi, membersApi } from '../api/services'
+import { useAuth } from '../context/AuthContext'
 import Card, { CardHeader, CardTitle } from '../components/ui/Card'
 import DataTable from '../components/tables/DataTable'
 import Badge from '../components/ui/Badge'
@@ -15,20 +16,23 @@ import { formatDate, showApiErrorToast } from '../utils'
 import toast from 'react-hot-toast'
 
 export default function ApprovalsPage() {
+  const { user } = useAuth()
+  const isBatchAdmin = user?.role === 'batch_admin'
   const [confirmAction, setConfirmAction] = useState(null)
   const queryClient = useQueryClient()
 
   const { data: pendingMembers, isLoading } = useQuery({
-    queryKey: ['pending-members'],
+    queryKey: ['pending-members', isBatchAdmin ? user?.batchId : 'all'],
     queryFn: membersApi.getPending,
   })
 
   const approveMutation = useMutation({
-    mutationFn: membersApi.approve,
+    mutationFn: applicationsApi.approve,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-members'] })
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
-      toast.success('Member approved successfully')
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+      toast.success('Member approved and poster generated!')
       setConfirmAction(null)
     },
     onError: (err) => {
@@ -37,10 +41,11 @@ export default function ApprovalsPage() {
   })
 
   const rejectMutation = useMutation({
-    mutationFn: membersApi.reject,
+    mutationFn: applicationsApi.reject,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-members'] })
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
       toast.success('Member rejected')
       setConfirmAction(null)
     },
@@ -54,12 +59,13 @@ export default function ApprovalsPage() {
     {
       key: 'fullName',
       label: 'Member',
+      minWidth: '220px',
       render: (val, row) => (
-        <div className="flex items-center gap-3">
-          <Avatar name={row.fullName} size="sm" />
+        <div className="flex items-center gap-3 min-w-max">
+          <Avatar name={row.fullName} size="sm" className="shrink-0" />
           <div>
-            <p className="font-medium text-[var(--text-primary)]">{row.fullName}</p>
-            <p className="text-xs text-[var(--text-tertiary)]">{row.batchName}</p>
+            <p className="font-medium text-[var(--text-primary)] whitespace-nowrap">{row.fullName}</p>
+            <p className="text-xs text-[var(--text-tertiary)] whitespace-nowrap">{row.batchName}</p>
           </div>
         </div>
       ),
@@ -67,25 +73,30 @@ export default function ApprovalsPage() {
     {
       key: 'district',
       label: 'District',
+      minWidth: '130px',
       render: (val) => (
-        <span className="text-[var(--text-secondary)] text-sm">{val}</span>
+        <span className="text-[var(--text-secondary)] text-sm whitespace-nowrap">{val}</span>
       ),
     },
     {
       key: 'paymentStatus',
       label: 'Payment',
+      minWidth: '120px',
       render: (val) => <Badge variant={val} />,
     },
     {
       key: 'registeredAt',
       label: 'Applied On',
+      minWidth: '130px',
       render: (val) => (
-        <span className="text-[var(--text-secondary)] text-sm">{formatDate(val)}</span>
+        <span className="text-[var(--text-secondary)] text-sm whitespace-nowrap">{formatDate(val)}</span>
       ),
     },
     {
       key: 'actions',
       label: 'Actions',
+      minWidth: '180px',
+      width: '180px',
       render: (_, row) => (
         <div className="flex items-center gap-2">
           <Button
@@ -127,10 +138,12 @@ export default function ApprovalsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)] font-display">
-            Pending Approvals
+            {isBatchAdmin ? 'Batch Pending Approvals' : 'Pending Approvals'}
           </h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Review and approve membership applications
+            {isBatchAdmin
+              ? `Review and approve membership applications for ${user?.batchName || 'your batch'}`
+              : 'Review and approve membership applications across all batches'}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
@@ -151,6 +164,7 @@ export default function ApprovalsPage() {
           <DataTable
             columns={columns}
             data={pendingMembers || []}
+            minWidth="780px"
             emptyMessage="No pending approvals"
           />
         )}

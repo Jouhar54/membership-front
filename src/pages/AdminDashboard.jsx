@@ -7,6 +7,7 @@ import {
   TrendingUp, ArrowRight,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import StatCard from '../components/ui/StatCard'
 import Card, { CardHeader, CardTitle } from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
@@ -19,19 +20,21 @@ import DeveloperCTA from '../components/common/DeveloperCTA'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isBatchAdmin = user?.role === 'batch_admin'
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['admin-stats'],
+    queryKey: ['admin-stats', isBatchAdmin ? user?.batchId : 'all'],
     queryFn: membersApi.getStats,
   })
 
   const { data: recentMembers, isLoading: recentLoading } = useQuery({
-    queryKey: ['recent-members'],
+    queryKey: ['recent-members', isBatchAdmin ? user?.batchId : 'all'],
     queryFn: membersApi.getRecent,
   })
 
   const { data: pendingMembers, isLoading: pendingLoading } = useQuery({
-    queryKey: ['pending-members'],
+    queryKey: ['pending-members', isBatchAdmin ? user?.batchId : 'all'],
     queryFn: membersApi.getPending,
   })
 
@@ -42,11 +45,22 @@ export default function AdminDashboard() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] font-display">
-            Dashboard
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] font-display">
+              {isBatchAdmin
+                ? `${stats?.batchName || user?.batchName || 'Batch'} Dashboard`
+                : 'Dashboard'}
+            </h1>
+            {isBatchAdmin && (
+              <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-primary-50 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                Batch Admin
+              </span>
+            )}
+          </div>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Overview of membership campaign progress & system metrics
+            {isBatchAdmin
+              ? `Overview of membership campaign progress & applications for ${stats?.batchName || user?.batchName || 'your assigned batch'}`
+              : 'Overview of membership campaign progress & system metrics'}
           </p>
         </div>
         <Button
@@ -59,43 +73,78 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      {/* Stats Grid - Super Admin Stats */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Memberships"
-          value={stats?.totalMemberships ?? stats?.total ?? 0}
-          icon={Users}
-          color="primary"
-          trendLabel="all applications"
-        />
-        <StatCard
-          title="Approved Memberships"
-          value={stats?.approvedMemberships ?? stats?.approved ?? 0}
-          icon={UserCheck}
-          color="success"
-          trendLabel={`${stats?.pendingMemberships || 0} pending review`}
-        />
-        <StatCard
-          title="Total Batches"
-          value={stats?.totalBatches ?? 0}
-          icon={GraduationCap}
-          color="info"
-          trendLabel="active batches"
-        />
-        <StatCard
-          title="Total Users"
-          value={stats?.totalUsers ?? 0}
-          icon={ShieldCheck}
-          color="warning"
-          trendLabel="admins & coordinators"
-        />
+        {isBatchAdmin ? (
+          <>
+            <StatCard
+              title="Total Applications"
+              value={stats?.totalMemberships ?? stats?.total ?? 0}
+              icon={Users}
+              color="primary"
+              trendLabel={stats?.batchName || user?.batchName ? `${stats?.batchName || user?.batchName}` : 'in your batch'}
+            />
+            <StatCard
+              title="Approved Members"
+              value={stats?.approvedMemberships ?? stats?.approved ?? 0}
+              icon={UserCheck}
+              color="success"
+              trendLabel={`${stats?.pendingMemberships || 0} pending review`}
+            />
+            <StatCard
+              title="Pending Approvals"
+              value={stats?.pendingMemberships ?? 0}
+              icon={Clock}
+              color="warning"
+              trendLabel="awaiting verification"
+            />
+            <StatCard
+              title="Paid Applications"
+              value={stats?.paidMemberships ?? 0}
+              icon={CreditCard}
+              color="info"
+              trendLabel={`${stats?.pendingPaymentMemberships || 0} payment pending`}
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Total Memberships"
+              value={stats?.totalMemberships ?? stats?.total ?? 0}
+              icon={Users}
+              color="primary"
+              trendLabel="all applications"
+            />
+            <StatCard
+              title="Approved Memberships"
+              value={stats?.approvedMemberships ?? stats?.approved ?? 0}
+              icon={UserCheck}
+              color="success"
+              trendLabel={`${stats?.pendingMemberships || 0} pending review`}
+            />
+            <StatCard
+              title="Total Batches"
+              value={stats?.totalBatches ?? 0}
+              icon={GraduationCap}
+              color="info"
+              trendLabel="active batches"
+            />
+            <StatCard
+              title="Total Users"
+              value={stats?.totalUsers ?? 0}
+              icon={ShieldCheck}
+              color="warning"
+              trendLabel="admins & coordinators"
+            />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Registrations */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Registrations</CardTitle>
+            <CardTitle>{isBatchAdmin ? 'Recent Batch Registrations' : 'Recent Registrations'}</CardTitle>
             <Button
               variant="ghost"
               size="xs"

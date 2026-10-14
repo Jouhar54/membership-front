@@ -124,44 +124,50 @@ export default function MembersPage() {
     {
       key: 'fullName',
       label: 'Name',
+      minWidth: '220px',
       render: (val, row) => (
-        <div className="flex items-center gap-3">
-          <Avatar name={row.fullName} src={row.profilePhoto} size="sm" />
-          <span className="font-medium text-[var(--text-primary)]">{row.fullName}</span>
+        <div className="flex items-center gap-3 min-w-max">
+          <Avatar name={row.fullName} src={row.profilePhoto} size="sm" className="shrink-0" />
+          <span className="font-medium text-[var(--text-primary)] whitespace-nowrap">{row.fullName}</span>
         </div>
       ),
     },
     {
       key: 'phone',
       label: 'Phone',
+      minWidth: '140px',
       render: (val) => (
-        <span className="text-[var(--text-secondary)]">{formatPhone(val)}</span>
+        <span className="text-[var(--text-secondary)] whitespace-nowrap font-medium">{formatPhone(val)}</span>
       ),
     },
     {
       key: 'bloodGroup',
       label: 'Blood Group',
+      minWidth: '110px',
       render: (val, row) => (
-        <span className="text-[var(--text-secondary)] font-medium">{row.bloodGroup || '—'}</span>
+        <span className="text-[var(--text-secondary)] font-medium whitespace-nowrap">{row.bloodGroup || '—'}</span>
       ),
     },
     {
       key: 'batchName',
       label: 'Batch',
+      minWidth: '130px',
       render: (val) => (
-        <span className="text-[var(--text-secondary)] text-xs font-medium">{val}</span>
+        <span className="text-[var(--text-secondary)] text-xs font-medium whitespace-nowrap">{val}</span>
       ),
     },
     {
       key: 'paymentStatus',
       label: 'Payment Status',
+      minWidth: '140px',
       render: (val) => <Badge variant={val} />,
     },
     {
       key: 'membershipStatus',
       label: 'Membership Status',
+      minWidth: '170px',
       render: (val, row) => (
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap min-w-max">
           <Badge variant={val} />
           {row.membershipStatus === 'rejected' && row.rejectionReason && (
             <span
@@ -177,6 +183,8 @@ export default function MembersPage() {
     {
       key: 'actions',
       label: 'Actions',
+      minWidth: '110px',
+      width: '110px',
       render: (_, row) => (
         <div className="flex items-center gap-1">
           <Button
@@ -323,6 +331,7 @@ export default function MembersPage() {
         <DataTable
           columns={columns}
           data={filteredApplications}
+          minWidth="1000px"
           emptyMessage="No applications found matching your selected filters"
           emptyIcon={Users}
         />

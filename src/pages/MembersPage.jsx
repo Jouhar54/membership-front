@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, CheckCircle2, XCircle, CreditCard,
-  Eye, Users, RotateCcw,
+  Eye, Users, RotateCcw, ExternalLink, Receipt,
 } from 'lucide-react'
 import { applicationsApi, batchesApi } from '../api/services'
 import { useAuth } from '../context/AuthContext'
@@ -352,6 +352,7 @@ export default function MembersPage() {
       <ConfirmModal
         isOpen={!!confirmAction && confirmAction.type !== 'reject'}
         onClose={() => setConfirmAction(null)}
+        size={confirmAction?.type === 'pay' ? 'md' : 'sm'}
         title={
           confirmAction?.type === 'approve'
             ? 'Approve Application'
@@ -371,7 +372,60 @@ export default function MembersPage() {
           if (confirmAction?.type === 'approve') approveMutation.mutate(confirmAction.member.id)
           if (confirmAction?.type === 'pay') markPaidMutation.mutate(confirmAction.member.id)
         }}
-      />
+      >
+        {confirmAction?.type === 'pay' && (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-[var(--text-secondary)] uppercase tracking-wider text-[11px]">
+                Uploaded Payment Proof
+              </span>
+              {(confirmAction?.member?.paymentScreenshot || confirmAction?.member?.paymentProof) && (
+                <a
+                  href={confirmAction?.member?.paymentScreenshot || confirmAction?.member?.paymentProof}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-primary-600 dark:text-primary-400 hover:underline"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span>Open Full Image</span>
+                </a>
+              )}
+            </div>
+
+            {confirmAction?.member?.paymentScreenshot || confirmAction?.member?.paymentProof ? (
+              <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)]/50 p-2.5 flex items-center justify-center overflow-hidden">
+                <a
+                  href={confirmAction?.member?.paymentScreenshot || confirmAction?.member?.paymentProof}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative block max-h-64 overflow-hidden rounded-lg cursor-pointer"
+                  title="Click to view full image in a new tab"
+                >
+                  <img
+                    src={confirmAction?.member?.paymentScreenshot || confirmAction?.member?.paymentProof}
+                    alt="Payment Screenshot"
+                    className="max-h-64 w-auto object-contain rounded-lg transition-transform duration-200 group-hover:scale-[1.02] bg-white dark:bg-slate-900"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg text-white text-xs font-medium gap-1.5 backdrop-blur-[1px]">
+                    <ExternalLink className="w-4 h-4" />
+                    <span>View Full Size</span>
+                  </div>
+                </a>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--bg-tertiary)]/30 text-center">
+                <Receipt className="w-6 h-6 text-[var(--text-tertiary)]/60 mx-auto mb-1.5" />
+                <p className="text-xs text-[var(--text-secondary)] font-medium">
+                  No payment screenshot uploaded
+                </p>
+                <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                  The applicant did not attach a transaction screenshot during registration.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </ConfirmModal>
 
       {/* View Details Modal */}
       <Modal
@@ -448,6 +502,12 @@ export default function MembersPage() {
                   <div>
                     <span className="text-[var(--text-tertiary)] block">Batch</span>
                     <span className="font-medium text-[var(--text-primary)]">{viewApplication.batchName || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-tertiary)] block">ANWARI Certificate No.</span>
+                    <span className="font-semibold text-primary-600 dark:text-primary-400 font-mono">
+                      {viewApplication.anwariCertificateNo || '—'}
+                    </span>
                   </div>
                   {viewApplication.membershipId && (
                     <div>

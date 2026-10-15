@@ -26,6 +26,10 @@ import {
   Receipt,
   X,
   Crop,
+  Search,
+  Award,
+  Check,
+  Users,
 } from 'lucide-react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { applicationSchema } from '../lib/validations'
@@ -35,6 +39,7 @@ import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import DatePicker from '../components/ui/DatePicker'
 import Button from '../components/ui/Button'
+import Modal from '../components/ui/Modal'
 import DeveloperCTA from '../components/common/DeveloperCTA'
 import ImageCropModal from '../components/ui/ImageCropModal'
 import toast from 'react-hot-toast'
@@ -49,6 +54,7 @@ export default function RegisterPage() {
   const fileInputRef = useRef(null)
   const [paymentPreview, setPaymentPreview] = useState(null)
   const [submittedApp, setSubmittedApp] = useState(null)
+  const [confirmingBatch, setConfirmingBatch] = useState(null)
 
   const todayStr = new Date().toISOString().split('T')[0]
 
@@ -85,6 +91,7 @@ export default function RegisterPage() {
       thaluk: '',
       jobType: '',
       jobTypeOther: '',
+      anwariCertificateNo: '',
       declarationAccepted: false,
       declarationDate: todayStr,
       profilePhoto: undefined,
@@ -163,6 +170,21 @@ export default function RegisterPage() {
     }
   }
 
+  const handleBatchBeforeSelect = (batchId) => {
+    const batch = batches.find((b) => String(b.id) === String(batchId))
+    if (batch) {
+      setConfirmingBatch(batch)
+    }
+  }
+
+  const handleConfirmBatch = () => {
+    if (confirmingBatch) {
+      setValue('batchId', confirmingBatch.id, { shouldValidate: true })
+      toast.success(`Selected ${confirmingBatch.name}`)
+      setConfirmingBatch(null)
+    }
+  }
+
   const onSubmit = (data) => {
     const payload = {
       ...data,
@@ -220,6 +242,12 @@ export default function RegisterPage() {
               <span className="text-[var(--text-tertiary)] block">Batch</span>
               <span className="text-[var(--text-primary)] font-medium">{submittedApp.batchName || '—'}</span>
             </div>
+            {submittedApp.anwariCertificateNo && (
+              <div className="col-span-2 pt-1 border-t border-[var(--border-color)]">
+                <span className="text-[var(--text-tertiary)] block">ANWARI Certificate No.</span>
+                <span className="text-[var(--text-primary)] font-semibold font-mono">{submittedApp.anwariCertificateNo}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -262,13 +290,22 @@ export default function RegisterPage() {
             <Sparkles className="w-4 h-4" />
             <span>Alumni Membership Form</span>
           </div>
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] hover:bg-[var(--bg-tertiary)] hover:border-primary-500/50 text-xs font-semibold text-[var(--text-secondary)] hover:text-primary-600 dark:hover:text-primary-400 transition-all shadow-sm flex-shrink-0"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-primary-500" />
-            <span>Admin Login</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/status-check"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border border-primary-500/30 bg-primary-50/70 dark:bg-primary-950/50 hover:bg-primary-100 dark:hover:bg-primary-900/60 text-xs font-semibold text-primary-700 dark:text-primary-300 hover:border-primary-500/60 transition-all shadow-xs flex-shrink-0"
+            >
+              <Search className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
+              <span>Check Status</span>
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] hover:bg-[var(--bg-tertiary)] hover:border-primary-500/50 text-xs font-semibold text-[var(--text-secondary)] hover:text-primary-600 dark:hover:text-primary-400 transition-all shadow-sm flex-shrink-0"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-primary-500" />
+              <span>Admin Login</span>
+            </Link>
+          </div>
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] font-display tracking-tight">
           Membership Application
@@ -279,7 +316,24 @@ export default function RegisterPage() {
       </div>
 
       {/* Scrollable Middle Content */}
-      <div className="flex-1 overflow-y-auto pr-1.5 space-y-6 custom-scrollbar pb-6">
+      <div className="flex-1 overflow-y-auto pr-1.5 space-y-4 custom-scrollbar pb-6">
+        {/* Already applied banner at the top of the form */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 py-2.5 rounded-xl bg-primary-50/70 dark:bg-primary-950/40 border border-primary-200/60 dark:border-primary-800/50 text-xs shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse shrink-0" />
+            <span className="text-[var(--text-secondary)]">
+              Already submitted an application? <strong className="text-[var(--text-primary)] font-medium">Track your approval & poster</strong>
+            </span>
+          </div>
+          <Link
+            to="/status-check"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-medium text-xs transition-colors shrink-0 shadow-xs"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Check Application Status</span>
+          </Link>
+        </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* ─── SECTION 1: Personal Details ───────────────────────── */}
         <div className="bg-[var(--bg-primary)] p-4 sm:p-5 rounded-2xl border border-[var(--border-color)] space-y-4 shadow-sm">
@@ -556,6 +610,8 @@ export default function RegisterPage() {
               error={errors.batchId?.message}
               placeholder="Select batch..."
               options={batches.map((b) => ({ value: b.id, label: b.name }))}
+              value={watch('batchId')}
+              onBeforeSelect={handleBatchBeforeSelect}
               {...register('batchId')}
             />
 
@@ -568,6 +624,14 @@ export default function RegisterPage() {
               {...register('jobType')}
             />
           </div>
+
+          <Input
+            label="ANWARI Certificate Number"
+            icon={Award}
+            placeholder="Enter ANWARI certificate number (e.g. ANW-12345)"
+            error={errors.anwariCertificateNo?.message}
+            {...register('anwariCertificateNo')}
+          />
 
           {selectedJobType === 'Others' && (
             <Input
@@ -683,17 +747,8 @@ export default function RegisterPage() {
         </div>
       </form>
 
-        <div className="pt-2 pb-4 space-y-2 text-center text-sm text-[var(--text-secondary)]">
-          <p>
-            Already applied?{' '}
-            <Link
-              to="/status-check"
-              className="text-primary-600 dark:text-primary-400 hover:underline font-semibold"
-            >
-              Check Application Status
-            </Link>
-          </p>
-          <div className="flex items-center justify-center gap-1.5 pt-1 text-xs text-[var(--text-tertiary)]">
+        <div className="pt-2 pb-4 text-center text-xs text-[var(--text-tertiary)]">
+          <div className="flex items-center justify-center gap-1.5">
             <span>Admin or Batch Coordinator?</span>
             <Link
               to="/login"
@@ -714,6 +769,74 @@ export default function RegisterPage() {
         onClose={() => setIsCropModalOpen(false)}
         onCropSave={handleCropSave}
       />
+
+      {/* Batch Selection Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(confirmingBatch)}
+        onClose={() => setConfirmingBatch(null)}
+        title="Confirm Batch Selection"
+        size="md"
+      >
+        {confirmingBatch && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-primary-50/60 dark:bg-primary-950/40 border border-primary-200/60 dark:border-primary-800/50 flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0 border border-primary-500/20 shadow-xs">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400">
+                    Alumni Batch
+                  </span>
+                  {confirmingBatch.batchCode && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-primary-500/10 text-primary-700 dark:text-primary-300 border border-primary-500/20">
+                      {confirmingBatch.batchCode}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-lg font-bold text-[var(--text-primary)] mt-0.5 font-display">
+                  {confirmingBatch.name}
+                </h3>
+                {confirmingBatch.memberCount !== undefined && (
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5" />
+                    <span>{confirmingBatch.memberCount} members currently registered</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[var(--bg-tertiary)]/50 border border-[var(--border-color)] text-xs text-[var(--text-secondary)] space-y-2">
+              <p className="leading-relaxed">
+                Are you sure you want to select <strong className="text-[var(--text-primary)] font-semibold">{confirmingBatch.name}</strong> as your graduating batch?
+              </p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                Your application and membership ID will be officially affiliated with this batch and verified by its coordinators.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setConfirmingBatch(null)}
+              >
+                Choose Another
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                icon={Check}
+                onClick={handleConfirmBatch}
+              >
+                Confirm Batch
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

@@ -52,11 +52,23 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
   )
 }
 
-export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = 'Confirm', variant = 'primary', loading = false }) {
+export function ConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = 'Confirm',
+  variant = 'primary',
+  loading = false,
+  children,
+  size = 'sm',
+}) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <p className="text-sm text-[var(--text-secondary)] mb-5">{message}</p>
-      <div className="flex items-center justify-end gap-2.5">
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size={size}>
+      {message && <p className="text-sm text-[var(--text-secondary)] mb-4">{message}</p>}
+      {children}
+      <div className="flex items-center justify-end gap-2.5 mt-5">
         <Button variant="secondary" size="sm" onClick={onClose} disabled={loading}>
           Cancel
         </Button>

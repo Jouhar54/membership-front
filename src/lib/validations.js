@@ -110,6 +110,7 @@ export const applicationSchema = z.object({
   thaluk: z.string().min(1, 'Taluk / Thalukk is required'),
   jobType: z.string().min(1, 'Please select a job type'),
   jobTypeOther: z.string().optional(),
+  anwariCertificateNo: z.string().trim().min(1, 'ANWARI Certificate number is required'),
   declarationAccepted: z
     .boolean()
     .refine((val) => val === true, 'You must accept the declaration to proceed'),

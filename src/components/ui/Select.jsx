@@ -20,6 +20,7 @@ const Select = forwardRef(
       disabled = false,
       searchable = true,
       icon: Icon,
+      onBeforeSelect,
       ...props
     },
     ref
@@ -116,6 +117,13 @@ const Select = forwardRef(
 
     // Handle selecting an option
     const handleSelect = (optionValue) => {
+      if (onBeforeSelect && optionValue && String(optionValue) !== String(internalValue)) {
+        setIsOpen(false)
+        setSearchTerm('')
+        onBeforeSelect(optionValue)
+        return
+      }
+
       setInternalValue(optionValue)
       setIsOpen(false)
       setSearchTerm('')

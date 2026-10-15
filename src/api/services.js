@@ -396,6 +396,7 @@ export function normaliseApplication(app) {
     thaluk: app.thaluk || '',
     jobType: app.jobType || '',
     jobTypeOther: app.jobTypeOther || '',
+    anwariCertificateNo: app.anwariCertificateNo || app.certificateNo || '',
     declarationAccepted: app.declarationAccepted || false,
     declarationDate: app.declarationDate || '',
     batchId: batch._id || batch.id || app.batch,
@@ -440,6 +441,7 @@ export const applicationsApi = {
     if (data.thaluk) formData.append('thaluk', data.thaluk)
     if (data.jobType) formData.append('jobType', data.jobType)
     if (data.jobTypeOther) formData.append('jobTypeOther', data.jobTypeOther)
+    if (data.anwariCertificateNo) formData.append('anwariCertificateNo', data.anwariCertificateNo)
     formData.append('declarationAccepted', String(!!data.declarationAccepted))
     const todayStr = new Date().toISOString().split('T')[0]
     formData.append('declarationDate', data.declarationDate || todayStr)

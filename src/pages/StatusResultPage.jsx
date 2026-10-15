@@ -44,6 +44,7 @@ export default function StatusResultPage() {
     phone,
     district,
     batchName,
+    anwariCertificateNo,
     paymentStatus,
     membershipStatus,
     membershipId,
@@ -168,6 +169,12 @@ export default function StatusResultPage() {
             <span className="block text-xs text-[var(--text-tertiary)] uppercase font-semibold">Payment</span>
             <span className="inline-block mt-0.5"><Badge variant={paymentStatus} /></span>
           </div>
+          {anwariCertificateNo && (
+            <div className="col-span-2 pt-2 border-t border-[var(--border-color)]">
+              <span className="block text-xs text-[var(--text-tertiary)] uppercase font-semibold">ANWARI Certificate No.</span>
+              <span className="font-semibold text-primary-600 dark:text-primary-400 font-mono">{anwariCertificateNo}</span>
+            </div>
+          )}
         </div>
       </Card>
 

@@ -80,7 +80,7 @@ export default function StatusResultPage() {
   const posterDownloadEndpoint = `${apiBaseUrl}/applications/poster/${id}`
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex-1 overflow-y-auto pr-1.5 space-y-6 custom-scrollbar pb-10">
       {/* Back Button */}
       <div className="flex items-center justify-between">
         <Link
@@ -202,7 +202,7 @@ export default function StatusResultPage() {
             variant="primary"
             className="w-full"
             icon={Download}
-            onClick={() => window.open(posterDownloadEndpoint, '_blank')}
+            onClick={() => window.open(posterUrl || posterDownloadEndpoint, '_blank')}
           >
             Download Poster
           </Button>

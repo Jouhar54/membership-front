@@ -46,8 +46,8 @@ export default function AuthLayout() {
       {/* Right - Viewport Area with Fixed Header, Scrollable Body, Fixed Footer */}
       <div className="flex-1 h-screen flex flex-col overflow-hidden bg-[var(--bg-secondary)]">
         {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden px-4 sm:px-8 lg:px-12 pt-5 pb-2 flex justify-center">
-          <div className="w-full max-w-xl xl:max-w-2xl h-full flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden px-4 sm:px-8 lg:px-12 pt-5 pb-2 flex justify-center">
+          <div className="w-full max-w-xl xl:max-w-2xl h-full flex flex-col min-h-0 overflow-hidden">
             {/* Mobile logo */}
             <div className="lg:hidden flex items-center gap-3 mb-4 flex-shrink-0">
               <div className="w-10 h-10 rounded-xl bg-white backdrop-blur-sm flex items-center justify-center p-1 border border-[var(--border-color)] shadow-sm overflow-hidden">
@@ -59,7 +59,7 @@ export default function AuthLayout() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
               <Outlet />
             </div>
           </div>

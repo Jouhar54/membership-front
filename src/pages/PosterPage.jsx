@@ -6,6 +6,7 @@ import Badge from '../components/ui/Badge'
 import { useAuth } from '../context/AuthContext'
 import { dummyUsers } from '../lib/dummyData'
 import toast from 'react-hot-toast'
+import posterTemplateImg from '../assets/image.png'
 
 export default function PosterPage() {
   const { user } = useAuth()
@@ -13,23 +14,28 @@ export default function PosterPage() {
   const isReady = member.posterStatus === 'ready' || member.membershipStatus === 'approved'
 
   const handleDownload = () => {
-    toast.success('Poster download started!')
+    if (member.posterUrl) {
+      window.open(member.posterUrl, '_blank')
+    } else {
+      toast.success('Poster preview opened!')
+    }
   }
 
   const handleShare = async () => {
+    const shareTarget = member.posterUrl || window.location.href
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'AALIA Membership',
-          text: `${member.fullName} is now a member of AALIA!`,
-          url: window.location.href,
+          title: 'AALIA Membership Campaign',
+          text: `${member.fullName || 'Member'} has joined the AALIA Membership Campaign!`,
+          url: shareTarget,
         })
       } catch {
         // cancelled
       }
     } else {
       try {
-        await navigator.clipboard.writeText(window.location.href)
+        await navigator.clipboard.writeText(shareTarget)
         toast.success('Link copied to clipboard!')
       } catch {
         toast.error('Failed to copy link')
@@ -38,14 +44,14 @@ export default function PosterPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-xl mx-auto">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-[var(--text-primary)] font-display">
           Membership Poster
         </h1>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Your personalized AALIA membership poster
+          Your official AALIA membership campaign poster
         </p>
       </div>
 
@@ -65,58 +71,44 @@ export default function PosterPage() {
             </div>
 
             {/* Poster Preview */}
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--border-color)] bg-gradient-to-br from-primary-700 via-primary-800 to-primary-950 aspect-[3/4] mb-5">
-              {/* Decorative elements */}
-              <div className="absolute inset-0">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-primary-400/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-300/10 rounded-full blur-3xl" />
-                {/* Geometric pattern */}
-                <div className="absolute top-8 left-8 w-16 h-16 border border-white/10 rounded-lg rotate-12" />
-                <div className="absolute bottom-16 right-8 w-12 h-12 border border-white/10 rounded-full" />
-              </div>
-
-              <div className="relative z-10 flex flex-col items-center justify-center h-full p-8 text-center">
-                {/* Header */}
-                <div className="mb-auto pt-8">
-                  <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center mx-auto mb-3">
-                    <span className="text-white font-bold text-xl font-display">A</span>
-                  </div>
-                  <p className="text-primary-200 text-xs tracking-[0.3em] uppercase font-medium">
-                    Alumni Association
-                  </p>
-                </div>
-
-                {/* Member Info */}
-                <div className="space-y-4">
-                  <div className="w-24 h-24 mx-auto rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/20">
-                    <span className="text-white text-3xl font-bold font-display">
-                      {member.fullName?.charAt(0)}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white font-display">
-                      {member.fullName}
-                    </h2>
-                    <p className="text-primary-200 text-sm mt-1">
-                      {member.batchName || 'Al-Falah 2018'}
-                    </p>
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-xs font-medium text-white">Verified Member</span>
+            <div className="relative overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] aspect-[1003/1280] mb-5 shadow-lg flex items-center justify-center">
+              {member.posterUrl ? (
+                <img
+                  src={member.posterUrl}
+                  alt="AALIA Membership Campaign Poster"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="relative w-full h-full">
+                  <img
+                    src={posterTemplateImg}
+                    alt="AALIA Poster Template"
+                    className="w-full h-full object-cover select-none"
+                  />
+                  {/* Member photo overlay inside the white rounded box */}
+                  <div
+                    className="absolute overflow-hidden rounded-[15%] shadow-inner flex items-center justify-center bg-primary-950/20"
+                    style={{
+                      left: '19.84%',
+                      top: '22.18%',
+                      width: '29.91%',
+                      height: '29.60%',
+                    }}
+                  >
+                    {member.profilePhoto || member.photo ? (
+                      <img
+                        src={member.profilePhoto || member.photo}
+                        alt={member.fullName || 'Member'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#16213e] flex items-center justify-center text-white text-3xl font-bold font-display">
+                        {member.fullName?.charAt(0) || 'A'}
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* Footer */}
-                <div className="mt-auto pb-8">
-                  <p className="text-primary-300/60 text-[10px] tracking-wider uppercase">
-                    AALIA Membership Campaign 2026
-                  </p>
-                  <p className="text-white/20 text-[8px] tracking-wider mt-1">
-                    Powered by Jouhar
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Actions */}

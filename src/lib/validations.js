@@ -114,7 +114,10 @@ export const applicationSchema = z.object({
     .string()
     .optional()
     .nullable()
-    .transform((val) => (val ? val.trim() : '')),
+    .transform((val) => (val ? val.trim() : ''))
+    .refine((val) => !val || /^\d{4}$/.test(val), {
+      message: 'Certificate number must be a 4-digit number (e.g. 4351)',
+    }),
   declarationAccepted: z
     .boolean()
     .refine((val) => val === true, 'You must accept the declaration to proceed'),

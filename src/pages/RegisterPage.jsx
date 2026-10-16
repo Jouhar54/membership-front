@@ -648,14 +648,21 @@ export default function RegisterPage() {
                 ANWARI Certificate Number
               </label>
               <span className="text-[11px] font-medium text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-2 py-0.5 rounded-full border border-[var(--border-color)]">
-                Optional
+                Optional (4 digits)
               </span>
             </div>
             <Input
               icon={Award}
-              placeholder="Enter ANWARI certificate number (e.g. ANW-12345) - Optional"
+              placeholder="e.g. 4351"
+              maxLength={4}
+              inputMode="numeric"
               error={errors.anwariCertificateNo?.message}
-              {...register('anwariCertificateNo')}
+              {...register('anwariCertificateNo', {
+                onChange: (e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 4)
+                  setValue('anwariCertificateNo', val, { shouldValidate: true })
+                },
+              })}
             />
           </div>
 

@@ -76,6 +76,7 @@ const DatePicker = forwardRef(
       min,
       max,
       icon: CustomIcon,
+      required,
       ...props
     },
     ref
@@ -267,6 +268,7 @@ const DatePicker = forwardRef(
             className="block text-sm font-medium text-[var(--text-secondary)] select-none"
           >
             {label}
+            {required && <span className="text-error ml-1">*</span>}
           </label>
         )}
 

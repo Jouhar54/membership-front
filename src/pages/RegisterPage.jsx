@@ -421,6 +421,7 @@ export default function RegisterPage() {
             label="Name (Full Name)"
             icon={User}
             placeholder="ENTER FULL NAME"
+            required
             error={errors.fullName?.message}
             {...register('fullName', { onChange: handleNameChange })}
           />
@@ -430,6 +431,7 @@ export default function RegisterPage() {
             label="Father’s Name"
             icon={User}
             placeholder="Enter father's name"
+            required
             error={errors.fatherName?.message}
             {...register('fatherName')}
           />
@@ -438,6 +440,7 @@ export default function RegisterPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <DatePicker
               label="Date of Birth"
+              required
               error={errors.dob?.message}
               placeholder="Select date of birth..."
               value={watch('dob')}
@@ -447,6 +450,7 @@ export default function RegisterPage() {
             <Select
               label="Blood Group"
               icon={Droplet}
+              required
               error={errors.bloodGroup?.message}
               placeholder="Select blood group..."
               options={BLOOD_GROUPS.map((bg) => ({ value: bg, label: bg }))}
@@ -467,6 +471,7 @@ export default function RegisterPage() {
               label="Mobile Number (Mob)"
               icon={Phone}
               placeholder="9876543210"
+              required
               error={errors.phone?.message}
               {...register('phone')}
             />
@@ -474,7 +479,7 @@ export default function RegisterPage() {
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <label className="block text-sm font-medium text-[var(--text-secondary)]">
-                  WhatsApp Number
+                  WhatsApp Number <span className="text-error">*</span>
                 </label>
                 <button
                   type="button"
@@ -499,6 +504,7 @@ export default function RegisterPage() {
             type="email"
             icon={Mail}
             placeholder="example@gmail.com"
+            required
             error={errors.email?.message}
             {...register('email')}
           />
@@ -516,6 +522,7 @@ export default function RegisterPage() {
               label="House Name"
               icon={Home}
               placeholder="Enter house name / number"
+              required
               error={errors.houseName?.message}
               {...register('houseName')}
             />
@@ -524,6 +531,7 @@ export default function RegisterPage() {
               label="Place"
               icon={MapPin}
               placeholder="Enter place / locality"
+              required
               error={errors.place?.message}
               {...register('place')}
             />
@@ -534,6 +542,7 @@ export default function RegisterPage() {
               label="Post (Post Office)"
               icon={Building2}
               placeholder="Enter post office"
+              required
               error={errors.post?.message}
               {...register('post')}
             />
@@ -543,6 +552,7 @@ export default function RegisterPage() {
               icon={MapPin}
               placeholder="676505"
               maxLength={6}
+              required
               error={errors.pin?.message}
               {...register('pin')}
             />
@@ -553,6 +563,7 @@ export default function RegisterPage() {
               label="Panchayath / Municipality"
               icon={Landmark}
               placeholder="Enter panchayath"
+              required
               error={errors.panchayath?.message}
               {...register('panchayath')}
             />
@@ -561,6 +572,7 @@ export default function RegisterPage() {
               label="Mandalam"
               icon={MapPin}
               placeholder="Assembly constituency"
+              required
               error={errors.mandalam?.message}
               {...register('mandalam')}
             />
@@ -569,6 +581,7 @@ export default function RegisterPage() {
               label="Thalukk (Taluk)"
               icon={Building2}
               placeholder="Enter thalukk"
+              required
               error={errors.thaluk?.message}
               {...register('thaluk')}
             />
@@ -578,6 +591,7 @@ export default function RegisterPage() {
             <Select
               label="District"
               icon={MapPin}
+              required
               error={errors.district?.message}
               placeholder="Select district..."
               options={DISTRICTS.map((d) => ({ value: d, label: d }))}
@@ -587,6 +601,7 @@ export default function RegisterPage() {
             <Select
               label="State"
               icon={MapPin}
+              required
               error={errors.state?.message}
               placeholder="Select state..."
               defaultValue="Kerala"
@@ -607,6 +622,7 @@ export default function RegisterPage() {
             <Select
               label="Batch"
               icon={GraduationCap}
+              required
               error={errors.batchId?.message}
               placeholder="Select batch..."
               options={batches.map((b) => ({ value: b.id, label: b.name }))}
@@ -618,6 +634,7 @@ export default function RegisterPage() {
             <Select
               label="Job Type"
               icon={Briefcase}
+              required
               error={errors.jobType?.message}
               placeholder="Select job type..."
               options={JOB_TYPES.map((j) => ({ value: j, label: j }))}
@@ -625,18 +642,28 @@ export default function RegisterPage() {
             />
           </div>
 
-          <Input
-            label="ANWARI Certificate Number"
-            icon={Award}
-            placeholder="Enter ANWARI certificate number (e.g. ANW-12345)"
-            error={errors.anwariCertificateNo?.message}
-            {...register('anwariCertificateNo')}
-          />
+          <div>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="block text-sm font-medium text-[var(--text-secondary)]">
+                ANWARI Certificate Number
+              </label>
+              <span className="text-[11px] font-medium text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-2 py-0.5 rounded-full border border-[var(--border-color)]">
+                Optional
+              </span>
+            </div>
+            <Input
+              icon={Award}
+              placeholder="Enter ANWARI certificate number (e.g. ANW-12345) - Optional"
+              error={errors.anwariCertificateNo?.message}
+              {...register('anwariCertificateNo')}
+            />
+          </div>
 
           {selectedJobType === 'Others' && (
             <Input
               label="Specify Job Type / Occupation"
               icon={Briefcase}
+              required
               placeholder="Please specify your profession..."
               error={errors.jobTypeOther?.message}
               {...register('jobTypeOther')}
@@ -689,7 +716,7 @@ export default function RegisterPage() {
 
               <div className="flex-1 min-w-0">
                 <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
-                  Upload Payment Screenshot / Receipt
+                  Upload Payment Screenshot / Receipt <span className="text-error">*</span>
                 </label>
                 <p className="text-xs text-[var(--text-tertiary)] mb-2">
                   Attach screenshot showing transaction reference / UTR ID (JPG, PNG, WEBP).
@@ -724,7 +751,7 @@ export default function RegisterPage() {
                 {...register('declarationAccepted')}
               />
               <span className="text-sm font-medium text-[var(--text-primary)] leading-relaxed">
-                I accept and agree to be bound by the bylaw of AALIA and Anvariyya.
+                I accept and agree to be bound by the bylaw of AALIA and Anvariyya. <span className="text-error">*</span>
               </span>
             </label>
             {errors.declarationAccepted && (

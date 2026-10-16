@@ -21,6 +21,7 @@ const Select = forwardRef(
       searchable = true,
       icon: Icon,
       onBeforeSelect,
+      required,
       ...props
     },
     ref
@@ -186,6 +187,7 @@ const Select = forwardRef(
             className="block text-sm font-medium text-[var(--text-secondary)] select-none"
           >
             {label}
+            {required && <span className="text-error ml-1">*</span>}
           </label>
         )}
 

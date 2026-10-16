@@ -110,7 +110,11 @@ export const applicationSchema = z.object({
   thaluk: z.string().min(1, 'Taluk / Thalukk is required'),
   jobType: z.string().min(1, 'Please select a job type'),
   jobTypeOther: z.string().optional(),
-  anwariCertificateNo: z.string().trim().min(1, 'ANWARI Certificate number is required'),
+  anwariCertificateNo: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val ? val.trim() : '')),
   declarationAccepted: z
     .boolean()
     .refine((val) => val === true, 'You must accept the declaration to proceed'),
@@ -121,6 +125,21 @@ export const applicationSchema = z.object({
     return false
   }, 'Profile photo is required'),
   signature: z.any().optional(),
-  paymentScreenshot: z.any().optional(),
-})
+  paymentScreenshot: z.any().refine((file) => {
+    if (file instanceof FileList) return file.length > 0
+    if (file instanceof File) return true
+    return false
+  }, 'Payment screenshot is required'),
+}).refine(
+  (data) => {
+    if (data.jobType === 'Others') {
+      return Boolean(data.jobTypeOther && data.jobTypeOther.trim().length > 0)
+    }
+    return true
+  },
+  {
+    message: 'Please specify your job type / occupation',
+    path: ['jobTypeOther'],
+  }
+)
 

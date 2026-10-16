@@ -3,9 +3,9 @@ import { cn } from '../../utils'
 import { Eye, EyeOff } from 'lucide-react'
 
 const Input = forwardRef(
-  ({ label, error, icon: Icon, className = '', type = 'text', id, ...props }, ref) => {
+  ({ label, error, icon: Icon, className = '', type = 'text', id, required, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false)
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-')
+    const inputId = id || (typeof label === 'string' ? label.toLowerCase().replace(/\s+/g, '-') : undefined)
     const isPassword = type === 'password'
     const inputType = isPassword ? (showPassword ? 'text' : 'password') : type
 
@@ -17,6 +17,7 @@ const Input = forwardRef(
             className="block text-sm font-medium text-[var(--text-secondary)]"
           >
             {label}
+            {required && <span className="text-error ml-1">*</span>}
           </label>
         )}
         <div className="relative">

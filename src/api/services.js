@@ -274,6 +274,12 @@ export const membersApi = {
     return unwrap(res)
   },
 
+  /** PATCH /memberships/:id/undo-reject */
+  undoReject: async (id) => {
+    const res = await apiClient.patch(`/memberships/${id}/undo-reject`)
+    return unwrap(res)
+  },
+
   /** PATCH /memberships/:id/mark-paid */
   markPaid: async (id) => {
     const res = await apiClient.patch(`/memberships/${id}/mark-paid`)
@@ -509,6 +515,13 @@ export const applicationsApi = {
     const id = typeof arg === 'object' ? arg.id : arg
     const reason = typeof arg === 'object' ? arg.reason : reasonText
     const res = await apiClient.patch(`/admin/applications/${id}/reject`, reason ? { reason, rejectionReason: reason } : {})
+    const payload = unwrap(res)
+    return normaliseApplication(payload.application || payload)
+  },
+
+  /** PATCH /admin/applications/:id/undo-reject */
+  undoReject: async (id) => {
+    const res = await apiClient.patch(`/admin/applications/${id}/undo-reject`)
     const payload = unwrap(res)
     return normaliseApplication(payload.application || payload)
   },

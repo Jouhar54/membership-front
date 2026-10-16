@@ -96,6 +96,26 @@ export default function MembersPage() {
     },
   })
 
+  const undoRejectMutation = useMutation({
+    mutationFn: applicationsApi.undoReject,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
+      toast.success('Application restored to pending.')
+      setConfirmAction(null)
+      setViewApplication((prev) => (prev ? {
+        ...prev,
+        membershipStatus: 'pending',
+        rejectionReason: null,
+        rejectedAt: null,
+      } : null))
+    },
+    onError: (err) => {
+      showApiErrorToast(err, 'Failed to undo rejection.')
+    },
+  })
+
   const hasActiveFilters = Boolean(
     search || (!isBatchAdmin && batchFilter) || statusFilter || paymentFilter
   )
@@ -237,6 +257,19 @@ export default function MembersPage() {
               />
             </>
           )}
+          {row.membershipStatus === 'rejected' && (
+            <Button
+              variant="ghost"
+              size="xs"
+              icon={RotateCcw}
+              className="text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 dark:text-amber-400 dark:hover:text-amber-300"
+              onClick={(e) => {
+                e.stopPropagation()
+                setConfirmAction({ type: 'undo-reject', member: row })
+              }}
+              title="Undo Rejection (Restore to Pending)"
+            />
+          )}
         </div>
       ),
     },
@@ -348,7 +381,7 @@ export default function MembersPage() {
         }}
       />
 
-      {/* Confirm Modal for Approve / Mark Paid */}
+      {/* Confirm Modal for Approve / Mark Paid / Undo Reject */}
       <ConfirmModal
         isOpen={!!confirmAction && confirmAction.type !== 'reject'}
         onClose={() => setConfirmAction(null)}
@@ -356,21 +389,34 @@ export default function MembersPage() {
         title={
           confirmAction?.type === 'approve'
             ? 'Approve Application'
+            : confirmAction?.type === 'undo-reject'
+            ? 'Undo Rejection'
             : 'Mark as Paid'
         }
         message={
           confirmAction?.type === 'approve'
             ? `Are you sure you want to approve ${confirmAction?.member?.fullName}? This will generate their member poster.`
+            : confirmAction?.type === 'undo-reject'
+            ? `Are you sure you want to undo the rejection for ${confirmAction?.member?.fullName}? This will restore their application back to pending status.`
             : `Mark payment as received for ${confirmAction?.member?.fullName}?`
         }
         confirmText={
-          confirmAction?.type === 'approve' ? 'Approve' : 'Mark Paid'
+          confirmAction?.type === 'approve'
+            ? 'Approve'
+            : confirmAction?.type === 'undo-reject'
+            ? 'Undo Rejection'
+            : 'Mark Paid'
         }
         variant={confirmAction?.type === 'approve' ? 'success' : 'primary'}
-        loading={approveMutation.isPending || markPaidMutation.isPending}
+        loading={
+          approveMutation.isPending ||
+          markPaidMutation.isPending ||
+          undoRejectMutation.isPending
+        }
         onConfirm={() => {
           if (confirmAction?.type === 'approve') approveMutation.mutate(confirmAction.member.id)
           if (confirmAction?.type === 'pay') markPaidMutation.mutate(confirmAction.member.id)
+          if (confirmAction?.type === 'undo-reject') undoRejectMutation.mutate(confirmAction.member.id)
         }}
       >
         {confirmAction?.type === 'pay' && (
@@ -453,7 +499,7 @@ export default function MembersPage() {
 
             {/* Rejection Details Banner if Rejected */}
             {viewApplication.membershipStatus === 'rejected' && (
-              <div className="p-3 bg-error/10 border border-error/20 rounded-xl space-y-1">
+              <div className="p-3 bg-error/10 border border-error/20 rounded-xl space-y-2">
                 <div className="flex items-center justify-between text-error font-semibold text-xs uppercase tracking-wider">
                   <span className="flex items-center gap-1.5">
                     <XCircle className="w-3.5 h-3.5" />
@@ -465,10 +511,23 @@ export default function MembersPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[var(--text-primary)] mt-1">
+                <p className="text-xs text-[var(--text-primary)]">
                   <span className="text-[var(--text-tertiary)] font-medium">Reason: </span>
                   <span className="font-medium text-error">{viewApplication.rejectionReason || 'No specific reason provided'}</span>
                 </p>
+                <div className="pt-1 flex items-center justify-end">
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    icon={RotateCcw}
+                    className="text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700/60 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    onClick={() => {
+                      setConfirmAction({ type: 'undo-reject', member: viewApplication })
+                    }}
+                  >
+                    Undo Rejection
+                  </Button>
+                </div>
               </div>
             )}
 

@@ -36,7 +36,7 @@ const PhoneNumberInput = forwardRef(
       defaultCountry = 'in',
       required = false,
       disabled = false,
-      placeholder = 'Enter phone number',
+      placeholder,
       className = '',
       ...props
     },
@@ -62,6 +62,7 @@ const PhoneNumberInput = forwardRef(
       defaultCountry,
       value: value || '',
       countries: defaultCountries,
+      disableDialCodeAndPrefix: true,
       onChange: (data) => {
         onChange?.(data.phone, data)
       },
@@ -242,7 +243,15 @@ const PhoneNumberInput = forwardRef(
               onChange={handlePhoneValueChange}
               onBlur={onBlur}
               disabled={disabled}
-              placeholder={placeholder}
+              placeholder={
+                placeholder !== undefined
+                  ? placeholder
+                  : country?.iso2 === 'in'
+                  ? '98765 43210'
+                  : country?.iso2 === 'ae'
+                  ? '50 123 4567'
+                  : 'Enter phone number'
+              }
               className="w-full bg-transparent px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none disabled:cursor-not-allowed rounded-r-xl"
               {...props}
             />

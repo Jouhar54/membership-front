@@ -513,7 +513,6 @@ export default function RegisterPage() {
                     onChange={field.onChange}
                     error={errors.whatsapp?.message}
                     defaultCountry="in"
-                    placeholder="Enter WhatsApp number"
                   />
                 )}
               />

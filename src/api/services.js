@@ -437,7 +437,9 @@ export const applicationsApi = {
     if (data.post) formData.append('post', data.post)
     if (data.pin) formData.append('pin', data.pin)
     if (data.whatsapp) formData.append('whatsapp', data.whatsapp)
-    formData.append('phone', data.phone)
+    const phoneVal = data.phone_number || data.phone || ''
+    formData.append('phone', phoneVal)
+    if (data.phone_number || phoneVal) formData.append('phone_number', data.phone_number || phoneVal)
     formData.append('email', data.email)
     formData.append('batchId', data.batchId)
     formData.append('district', data.district || '')

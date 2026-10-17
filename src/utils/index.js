@@ -24,8 +24,14 @@ export function formatDate(dateString) {
  */
 export function formatPhone(phone) {
   if (!phone) return '—'
-  if (phone.startsWith('+91')) {
+  if (phone.startsWith('+91') && phone.length === 13) {
     return `+91 ${phone.slice(3, 8)} ${phone.slice(8)}`
+  }
+  if (phone.startsWith('+971')) {
+    const raw = phone.replace(/^\+971/, '')
+    if (raw.length === 9) {
+      return `+971 ${raw.slice(0, 2)} ${raw.slice(2, 5)} ${raw.slice(5)}`
+    }
   }
   return phone
 }

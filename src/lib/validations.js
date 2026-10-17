@@ -91,16 +91,9 @@ export const applicationSchema = z.object({
     .string()
     .min(1, 'PIN code is required')
     .regex(/^\d{6}$/, 'PIN code must be exactly 6 digits'),
-  whatsapp: z
-    .preprocess(
-      (val) => cleanPhone(val),
-      z.string().min(1, 'WhatsApp number is required').regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit phone number')
-    ),
-  phone: z
-    .preprocess(
-      (val) => cleanPhone(val),
-      z.string().min(1, 'Mobile number is required').regex(/^[6-9]\d{9}$/, 'Must be a valid 10-digit Indian mobile number')
-    ),
+  whatsapp: z.string().min(1, 'WhatsApp number is required'),
+  phone: z.string().optional(),
+  phone_number: z.string().min(1, 'Mobile number is required'),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
   batchId: z.string().min(1, 'Please select a batch'),
   district: z.string().min(1, 'Please select a district'),

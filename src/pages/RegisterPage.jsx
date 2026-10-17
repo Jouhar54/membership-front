@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   User,
@@ -11,7 +11,6 @@ import {
   Droplet,
   GraduationCap,
   MapPin,
-  Calendar,
   Home,
   Mail,
   Briefcase,
@@ -36,6 +35,7 @@ import { applicationSchema } from '../lib/validations'
 import { batchesApi, applicationsApi } from '../api/services'
 import { DISTRICTS, BLOOD_GROUPS, JOB_TYPES, STATES } from '../constants'
 import Input from '../components/ui/Input'
+import PhoneNumberInput from '../components/ui/PhoneNumberInput'
 import Select from '../components/ui/Select'
 import DatePicker from '../components/ui/DatePicker'
 import Button from '../components/ui/Button'
@@ -68,6 +68,7 @@ export default function RegisterPage() {
     handleSubmit,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(applicationSchema),
@@ -81,6 +82,7 @@ export default function RegisterPage() {
       post: '',
       pin: '',
       whatsapp: '',
+      phone_number: '',
       phone: '',
       email: '',
       batchId: '',
@@ -100,7 +102,7 @@ export default function RegisterPage() {
   })
 
   const selectedJobType = watch('jobType')
-  const phoneValue = watch('phone')
+  const phoneValue = watch('phone_number') || watch('phone')
 
   const applyMutation = useMutation({
     mutationFn: applicationsApi.create,
@@ -186,8 +188,11 @@ export default function RegisterPage() {
   }
 
   const onSubmit = (data) => {
+    const finalPhone = data.phone_number || data.phone || ''
     const payload = {
       ...data,
+      phone: finalPhone,
+      phone_number: finalPhone,
       declarationDate: data.declarationDate || new Date().toISOString().split('T')[0],
     }
     applyMutation.mutate(payload)
@@ -226,7 +231,7 @@ export default function RegisterPage() {
             </div>
             <div>
               <span className="text-[var(--text-tertiary)] block">Mobile</span>
-              <span className="text-[var(--text-primary)] font-medium">{submittedApp.phone}</span>
+              <span className="text-[var(--text-primary)] font-medium">{submittedApp.phone_number || submittedApp.phone}</span>
             </div>
             <div>
               <span className="text-[var(--text-tertiary)] block">Place / District</span>
@@ -467,13 +472,22 @@ export default function RegisterPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Mobile Number (Mob)"
-              icon={Phone}
-              placeholder="9876543210"
-              required
-              error={errors.phone?.message}
-              {...register('phone')}
+            <Controller
+              name="phone_number"
+              control={control}
+              render={({ field }) => (
+                <PhoneNumberInput
+                  label="Mobile Number (Mob)"
+                  required
+                  value={field.value}
+                  onChange={(val) => {
+                    field.onChange(val)
+                    setValue('phone', val, { shouldValidate: false })
+                  }}
+                  error={errors.phone_number?.message || errors.phone?.message}
+                  defaultCountry="in"
+                />
+              )}
             />
 
             <div>
@@ -490,11 +504,18 @@ export default function RegisterPage() {
                   <span>Same as Mob</span>
                 </button>
               </div>
-              <Input
-                icon={Phone}
-                placeholder="9876543210"
-                error={errors.whatsapp?.message}
-                {...register('whatsapp')}
+              <Controller
+                name="whatsapp"
+                control={control}
+                render={({ field }) => (
+                  <PhoneNumberInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={errors.whatsapp?.message}
+                    defaultCountry="in"
+                    placeholder="Enter WhatsApp number"
+                  />
+                )}
               />
             </div>
           </div>

@@ -119,6 +119,7 @@ export default function EditApplicationPage() {
   // Populate form with existing data once loaded
   useEffect(() => {
     if (application) {
+      const bId = application.batchId || application.batch?._id || application.batch?.id || application.batch || ''
       reset({
         fullName: application.fullName || '',
         fatherName: application.fatherName || '',
@@ -132,7 +133,7 @@ export default function EditApplicationPage() {
         phone_number: application.phone || '',
         phone: application.phone || '',
         email: application.email || '',
-        batchId: application.batchId || (application.batch?._id || application.batch?.id) || '',
+        batchId: bId ? String(bId) : '',
         district: application.district || '',
         state: application.state || 'Kerala',
         panchayath: application.panchayath || '',
@@ -458,7 +459,7 @@ export default function EditApplicationPage() {
                   required
                   searchable={false}
                   placeholder="Select blood group"
-                  options={BLOOD_GROUPS}
+                  options={BLOOD_GROUPS.map((bg) => ({ value: bg, label: bg }))}
                   value={field.value}
                   onChange={field.onChange}
                   error={errors.bloodGroup?.message}
@@ -616,7 +617,7 @@ export default function EditApplicationPage() {
                   required
                   searchable={true}
                   placeholder="Select district"
-                  options={DISTRICTS}
+                  options={DISTRICTS.map((d) => ({ value: d, label: d }))}
                   value={field.value}
                   onChange={field.onChange}
                   error={errors.district?.message}
@@ -635,7 +636,7 @@ export default function EditApplicationPage() {
                     required
                     searchable={true}
                     placeholder="Select state"
-                    options={STATES}
+                    options={STATES.map((s) => ({ value: s, label: s }))}
                     value={field.value}
                     onChange={field.onChange}
                     error={errors.state?.message}
@@ -666,10 +667,10 @@ export default function EditApplicationPage() {
                     searchable={true}
                     placeholder="Choose your passed out batch"
                     options={batches.map((b) => ({
-                      value: b.id,
-                      label: `${b.name} (${b.year})`,
+                      value: String(b.id),
+                      label: b.year ? `${b.name} (${b.year})` : b.name,
                     }))}
-                    value={field.value}
+                    value={field.value ? String(field.value) : ''}
                     onBeforeSelect={handleBatchBeforeSelect}
                     onChange={field.onChange}
                     error={errors.batchId?.message}
@@ -688,7 +689,7 @@ export default function EditApplicationPage() {
                   required
                   searchable={true}
                   placeholder="Select job type"
-                  options={JOB_TYPES}
+                  options={JOB_TYPES.map((j) => ({ value: j, label: j }))}
                   value={field.value}
                   onChange={field.onChange}
                   error={errors.jobType?.message}

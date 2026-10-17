@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, forwardRef, useId } from 'react'
+import { useState, useRef, useEffect, forwardRef, useId, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Check, Search, X } from 'lucide-react'
 import { cn } from '../../utils'
@@ -47,13 +47,27 @@ const Select = forwardRef(
       }
     }, [controlledValue])
 
+    // Normalize options so Select supports both string arrays and object arrays
+    const normalizedOptions = useMemo(() => {
+      return (options || []).map((opt) => {
+        if (typeof opt === 'string' || typeof opt === 'number') {
+          return { value: String(opt), label: String(opt) }
+        }
+        return {
+          ...opt,
+          value: opt?.value !== undefined && opt?.value !== null ? String(opt.value) : '',
+          label: opt?.label !== undefined && opt?.label !== null ? String(opt.label) : String(opt?.value || ''),
+        }
+      })
+    }, [options])
+
     // Find current selected option
-    const selectedOption = options.find(
-      (opt) => String(opt.value) === String(internalValue)
+    const selectedOption = normalizedOptions.find(
+      (opt) => internalValue !== '' && internalValue !== undefined && internalValue !== null && String(opt.value) === String(internalValue)
     )
 
     // Filter options if searchable (exclude empty value which is already represented by default top item)
-    const filteredOptions = options
+    const filteredOptions = normalizedOptions
       .filter((opt) => opt.value !== '' && opt.value !== null && opt.value !== undefined)
       .filter((opt) =>
         opt.label?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -111,10 +125,10 @@ const Select = forwardRef(
 
     // Focus search input when opened
     useEffect(() => {
-      if (isOpen && searchable && options.length > 6 && searchInputRef.current) {
+      if (isOpen && searchable && normalizedOptions.length > 6 && searchInputRef.current) {
         setTimeout(() => searchInputRef.current?.focus(), 50)
       }
-    }, [isOpen, searchable, options.length])
+    }, [isOpen, searchable, normalizedOptions.length])
 
     // Handle selecting an option
     const handleSelect = (optionValue) => {
@@ -177,7 +191,7 @@ const Select = forwardRef(
       }
     }
 
-    const showSearch = searchable && options.length > 6
+    const showSearch = searchable && normalizedOptions.length > 6
 
     return (
       <div className="space-y-1.5 w-full" ref={containerRef}>
@@ -245,7 +259,7 @@ const Select = forwardRef(
             {...props}
           >
             <option value="">{placeholder}</option>
-            {options.map((opt) => (
+            {normalizedOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>

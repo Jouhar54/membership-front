@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import StatusCheckPage from './pages/StatusCheckPage'
 import StatusResultPage from './pages/StatusResultPage'
+import EditApplicationPage from './pages/EditApplicationPage'
 import AdminDashboard from './pages/AdminDashboard'
 import BatchAdmins from './pages/admin/BatchAdmins'
 import MembersPage from './pages/MembersPage'
@@ -32,6 +33,7 @@ export default function App() {
         {/* Public Membership Flow */}
         <Route element={<AuthLayout />}>
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/edit-application/:id" element={<EditApplicationPage />} />
           <Route path="/status-check" element={<StatusCheckPage />} />
           <Route path="/status/:id" element={<StatusResultPage />} />
         </Route>

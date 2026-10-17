@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Clock, CheckCircle2, XCircle, Download, ArrowLeft, AlertCircle } from 'lucide-react'
+import { Clock, CheckCircle2, XCircle, Download, ArrowLeft, AlertCircle, Edit3 } from 'lucide-react'
 import { applicationsApi } from '../api/services'
 import { PageLoader } from '../components/ui/LoadingStates'
 import Card from '../components/ui/Card'
@@ -118,9 +118,9 @@ export default function StatusResultPage() {
             Please review the requirements, correct any issues, and submit a new application, or contact your batch coordinator for assistance.
           </p>
           <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
-            <Link to="/register" className="flex-1">
-              <Button variant="primary" size="sm" className="w-full">
-                Submit New Application
+            <Link to={`/edit-application/${id}`} className="flex-1">
+              <Button variant="primary" size="sm" icon={Edit3} className="w-full">
+                Edit & Resubmit Application
               </Button>
             </Link>
             <Link to="/status-check" className="flex-1">
@@ -134,9 +134,18 @@ export default function StatusResultPage() {
 
       {/* Application Details Card */}
       <Card>
-        <h3 className="text-base font-semibold text-[var(--text-primary)] font-display mb-4 border-b border-[var(--border-color)] pb-2">
-          Application Details
-        </h3>
+        <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3 mb-4">
+          <h3 className="text-base font-semibold text-[var(--text-primary)] font-display">
+            Application Details
+          </h3>
+          {membershipStatus !== 'approved' && (
+            <Link to={`/edit-application/${id}`}>
+              <Button variant="outline" size="xs" icon={Edit3}>
+                Edit Details
+              </Button>
+            </Link>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
           <div>
             <span className="block text-xs text-[var(--text-tertiary)] uppercase font-semibold">Full Name</span>

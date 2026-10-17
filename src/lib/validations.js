@@ -138,4 +138,55 @@ export const applicationSchema = z.object({
     path: ['jobTypeOther'],
   }
 )
-
+export const editApplicationSchema = z.object({
+  fullName: z
+    .string()
+    .min(2, 'Full name must be at least 2 characters')
+    .transform((val) => val.toUpperCase()),
+  fatherName: z.string().min(2, "Father's name is required"),
+  dob: z.string().min(1, 'Date of birth is required'),
+  bloodGroup: z.string().min(1, 'Please select a blood group'),
+  houseName: z.string().min(1, 'House name is required'),
+  place: z.string().min(1, 'Place is required'),
+  post: z.string().min(1, 'Post office is required'),
+  pin: z
+    .string()
+    .min(1, 'PIN code is required')
+    .regex(/^\d{6}$/, 'PIN code must be exactly 6 digits'),
+  whatsapp: z.string().min(1, 'WhatsApp number is required'),
+  phone: z.string().optional(),
+  phone_number: z.string().min(1, 'Mobile number is required'),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  batchId: z.string().min(1, 'Please select a batch'),
+  district: z.string().min(1, 'Please select a district'),
+  state: z.string().min(1, 'Please select/enter state'),
+  panchayath: z.string().min(1, 'Panchayath / Municipality is required'),
+  mandalam: z.string().min(1, 'Mandalam / Constituency is required'),
+  thaluk: z.string().min(1, 'Taluk / Thalukk is required'),
+  jobType: z.string().min(1, 'Please select a job type'),
+  jobTypeOther: z.string().optional(),
+  anwariCertificateNo: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val ? val.trim() : ''))
+    .refine((val) => !val || /^\d{4}$/.test(val), {
+      message: 'Certificate number must be a 4-digit number (e.g. 4351)',
+    }),
+  declarationAccepted: z.boolean().optional(),
+  declarationDate: z.string().optional(),
+  profilePhoto: z.any().optional(),
+  signature: z.any().optional(),
+  paymentScreenshot: z.any().optional(),
+}).refine(
+  (data) => {
+    if (data.jobType === 'Others') {
+      return Boolean(data.jobTypeOther && data.jobTypeOther.trim().length > 0)
+    }
+    return true
+  },
+  {
+    message: 'Please specify your job type / occupation',
+    path: ['jobTypeOther'],
+  }
+)

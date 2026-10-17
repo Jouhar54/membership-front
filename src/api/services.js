@@ -474,6 +474,55 @@ export const applicationsApi = {
     return normaliseApplication(payload.application || payload)
   },
 
+  /** PATCH /applications/:id */
+  update: async (id, data) => {
+    const formData = new FormData()
+    if (data.fullName) formData.append('fullName', data.fullName)
+    if (data.fatherName !== undefined) formData.append('fatherName', data.fatherName)
+    if (data.dob !== undefined) formData.append('dob', data.dob)
+    if (data.bloodGroup !== undefined) formData.append('bloodGroup', data.bloodGroup)
+    if (data.houseName !== undefined) formData.append('houseName', data.houseName)
+    if (data.place !== undefined) formData.append('place', data.place)
+    if (data.post !== undefined) formData.append('post', data.post)
+    if (data.pin !== undefined) formData.append('pin', data.pin)
+    if (data.whatsapp !== undefined) formData.append('whatsapp', data.whatsapp)
+
+    const phoneVal = data.phone_number || data.phone || ''
+    if (phoneVal) {
+      formData.append('phone', phoneVal)
+      formData.append('phone_number', phoneVal)
+    }
+    if (data.email) formData.append('email', data.email)
+    if (data.batchId) formData.append('batchId', data.batchId)
+    if (data.district !== undefined) formData.append('district', data.district || '')
+    if (data.state !== undefined) formData.append('state', data.state || 'Kerala')
+    if (data.panchayath !== undefined) formData.append('panchayath', data.panchayath)
+    if (data.mandalam !== undefined) formData.append('mandalam', data.mandalam)
+    if (data.thaluk !== undefined) formData.append('thaluk', data.thaluk)
+    if (data.jobType !== undefined) formData.append('jobType', data.jobType)
+    if (data.jobTypeOther !== undefined) formData.append('jobTypeOther', data.jobTypeOther)
+    if (data.anwariCertificateNo !== undefined) formData.append('anwariCertificateNo', data.anwariCertificateNo)
+
+    if (data.profilePhoto instanceof File) {
+      formData.append('profilePhoto', data.profilePhoto)
+    }
+    if (data.signature instanceof File) {
+      formData.append('signature', data.signature)
+    }
+    if (data.paymentScreenshot instanceof File) {
+      formData.append('paymentScreenshot', data.paymentScreenshot)
+      formData.append('paymentProof', data.paymentScreenshot)
+    }
+
+    const res = await apiClient.patch(`/applications/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    const payload = unwrap(res)
+    return normaliseApplication(payload.application || payload)
+  },
+
   /** POST /applications/status */
   checkStatus: async (searchKey) => {
     const res = await apiClient.post('/applications/status', { identifier: searchKey })

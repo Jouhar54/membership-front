@@ -536,15 +536,50 @@ export const applicationsApi = {
     return normaliseApplication(payload.application || payload)
   },
 
+  /**
+   * GET /admin/applications/all with pagination and filters
+   * Query params: page, limit, search, status, membershipStatus, paymentStatus, batch, batchId, sortBy, sortOrder
+   */
+  getAll: async (params = {}) => {
+    const res = await apiClient.get('/admin/applications/all', { params })
+    const payload = unwrap(res)
+    const list = Array.isArray(payload) ? payload : (payload?.applications ?? [])
+    const total = payload?.total ?? payload?.pagination?.total ?? list.length
+    const page = Number(payload?.page ?? payload?.pagination?.page ?? params.page ?? 1)
+    const limit = Number(payload?.limit ?? payload?.pagination?.limit ?? params.limit ?? 10)
+    const totalPages = Number(
+      payload?.totalPages ??
+      payload?.pagination?.totalPages ??
+      Math.max(1, Math.ceil(total / (limit || 10)))
+    )
+
+    const pagination = payload?.pagination ?? {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    }
+
+    return {
+      applications: list.map(normaliseApplication),
+      total,
+      page,
+      limit,
+      totalPages,
+      pagination,
+    }
+  },
+
   /** GET /admin/applications/:batchId (or /admin/applications/all) with optional query params */
   getByBatch: async (batchId, params = {}) => {
-    const endpoint = !batchId || batchId === 'all'
-      ? '/admin/applications/all'
-      : `/admin/applications/${batchId}`
-    const res = await apiClient.get(endpoint, { params })
-    const payload = unwrap(res)
-    const list = Array.isArray(payload) ? payload : payload?.applications ?? []
-    return list.map(normaliseApplication)
+    const queryParams = { ...params }
+    if (batchId && batchId !== 'all') {
+      queryParams.batch = batchId
+      queryParams.batchId = batchId
+    }
+    return applicationsApi.getAll(queryParams)
   },
 
   /** PATCH /admin/applications/:id/mark-paid */

@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, CheckCircle2, XCircle, CreditCard,
-  Eye, Users, RotateCcw, ExternalLink, Receipt,
+  Eye, Users, RotateCcw, ExternalLink, Receipt, ArrowUpDown,
 } from 'lucide-react'
 import { applicationsApi, batchesApi } from '../api/services'
 import { useAuth } from '../context/AuthContext'
+import { useDebounce } from '../hooks/useDebounce'
 import Card from '../components/ui/Card'
 import DataTable from '../components/tables/DataTable'
 import Badge from '../components/ui/Badge'
@@ -13,6 +14,7 @@ import Avatar from '../components/ui/Avatar'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
+import Pagination from '../components/ui/Pagination'
 import { ConfirmModal } from '../components/ui/Modal'
 import Modal from '../components/ui/Modal'
 import RejectReasonModal from '../components/ui/RejectReasonModal'
@@ -22,37 +24,99 @@ import toast from 'react-hot-toast'
 
 export default function MembersPage() {
   const { user } = useAuth()
+  const isBatchAdmin = user?.role === 'batch_admin'
+  const userBatchId = user?.batchId || null
+
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 350)
   const [batchFilter, setBatchFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [paymentFilter, setPaymentFilter] = useState('')
+  const [sortSelection, setSortSelection] = useState('created-desc')
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
   const [confirmAction, setConfirmAction] = useState(null)
   const [viewApplication, setViewApplication] = useState(null)
   const queryClient = useQueryClient()
-
-  const isBatchAdmin = user?.role === 'batch_admin'
 
   const { data: batches = [] } = useQuery({
     queryKey: ['batches'],
     queryFn: batchesApi.getAll,
   })
 
-  // Set default batch filter depending on role
-  useEffect(() => {
-    if (isBatchAdmin && user?.batchId) {
-      setBatchFilter(user.batchId)
+  // Derive sortBy & sortOrder from sortSelection
+  const { sortBy, sortOrder } = useMemo(() => {
+    switch (sortSelection) {
+      case 'created-asc':
+        return { sortBy: 'createdAt', sortOrder: 'asc' }
+      case 'name-asc':
+        return { sortBy: 'fullName', sortOrder: 'asc' }
+      case 'name-desc':
+        return { sortBy: 'fullName', sortOrder: 'desc' }
+      case 'created-desc':
+      default:
+        return { sortBy: 'createdAt', sortOrder: 'desc' }
     }
-  }, [user, isBatchAdmin])
+  }, [sortSelection])
 
-  const { data: applications = [], isLoading } = useQuery({
-    queryKey: ['applications', batchFilter],
-    queryFn: () => {
-      if (isBatchAdmin && user?.batchId) {
-        return applicationsApi.getByBatch(user.batchId)
-      }
-      return applicationsApi.getByBatch(batchFilter || 'all')
-    },
+  const effectiveBatch = isBatchAdmin && userBatchId ? userBatchId : batchFilter
+
+  // Construct query params matching API requirements
+  const queryParams = useMemo(() => {
+    const params = {
+      page,
+      limit,
+    }
+    const cleanSearch = debouncedSearch?.trim()
+    if (cleanSearch) {
+      params.search = cleanSearch
+    }
+    if (effectiveBatch && effectiveBatch !== 'all') {
+      params.batch = effectiveBatch
+      params.batchId = effectiveBatch
+    }
+    if (statusFilter && statusFilter !== 'all') {
+      params.status = statusFilter
+      params.membershipStatus = statusFilter
+    }
+    if (paymentFilter && paymentFilter !== 'all') {
+      params.paymentStatus = paymentFilter
+    }
+    if (sortBy) {
+      params.sortBy = sortBy
+    }
+    if (sortOrder) {
+      params.sortOrder = sortOrder
+    }
+    return params
+  }, [
+    page,
+    limit,
+    debouncedSearch,
+    effectiveBatch,
+    statusFilter,
+    paymentFilter,
+    sortBy,
+    sortOrder,
+  ])
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['applications', queryParams],
+    queryFn: () => applicationsApi.getAll(queryParams),
+    placeholderData: (previousData) => previousData,
   })
+
+  const applications = data?.applications || []
+  const total = data?.total ?? 0
+  const totalPages = data?.totalPages ?? 1
+  const pagination = data?.pagination ?? {
+    total,
+    page,
+    limit,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPrevPage: page > 1,
+  }
 
   const approveMutation = useMutation({
     mutationFn: applicationsApi.approve,
@@ -117,7 +181,12 @@ export default function MembersPage() {
   })
 
   const hasActiveFilters = Boolean(
-    search || (!isBatchAdmin && batchFilter) || statusFilter || paymentFilter
+    search ||
+    (!isBatchAdmin && batchFilter) ||
+    statusFilter ||
+    paymentFilter ||
+    sortSelection !== 'created-desc' ||
+    limit !== 10
   )
 
   const handleResetFilters = () => {
@@ -125,20 +194,10 @@ export default function MembersPage() {
     if (!isBatchAdmin) setBatchFilter('')
     setStatusFilter('')
     setPaymentFilter('')
+    setSortSelection('created-desc')
+    setLimit(10)
+    setPage(1)
   }
-
-  // Filter application list client-side
-  const filteredApplications = applications.filter((app) => {
-    const q = search.toLowerCase().trim()
-    const matchesSearch = !q || (
-      app.fullName?.toLowerCase().includes(q) ||
-      app.email?.toLowerCase().includes(q) ||
-      app.phone?.includes(q)
-    )
-    const matchesStatus = statusFilter ? app.membershipStatus === statusFilter : true
-    const matchesPayment = paymentFilter ? app.paymentStatus === paymentFilter : true
-    return matchesSearch && matchesStatus && matchesPayment
-  })
 
   const columns = [
     {
@@ -275,7 +334,7 @@ export default function MembersPage() {
     },
   ]
 
-  if (isLoading) return <PageLoader />
+  if (isLoading && !data) return <PageLoader />
 
   return (
     <div className="space-y-6">
@@ -292,8 +351,8 @@ export default function MembersPage() {
         <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] bg-[var(--bg-card)] px-3 py-1.5 rounded-xl border border-[var(--border-color)] self-start sm:self-auto shadow-sm">
           <Users className="w-3.5 h-3.5 text-primary-500" />
           <span>
-            Showing <strong className="text-[var(--text-primary)]">{filteredApplications.length}</strong> of{' '}
-            <strong className="text-[var(--text-primary)]">{applications.length}</strong> applications
+            Showing <strong className="text-[var(--text-primary)]">{applications.length}</strong> of{' '}
+            <strong className="text-[var(--text-primary)]">{total}</strong> applications
           </span>
         </div>
       </div>
@@ -306,17 +365,23 @@ export default function MembersPage() {
               icon={Search}
               placeholder="Search by name, email, or phone..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
             />
           </div>
           <div className="flex flex-wrap sm:flex-nowrap gap-2.5 items-center">
             {!isBatchAdmin && (
-              <div className="w-full sm:w-52 flex-shrink-0">
+              <div className="w-full sm:w-48 flex-shrink-0">
                 <Select
                   placeholder="All Batches"
                   options={batches.map((b) => ({ value: b.id, label: b.name }))}
                   value={batchFilter}
-                  onChange={(e) => setBatchFilter(e.target.value)}
+                  onChange={(e) => {
+                    setBatchFilter(e.target.value)
+                    setPage(1)
+                  }}
                 />
               </div>
             )}
@@ -329,7 +394,10 @@ export default function MembersPage() {
                   { value: 'rejected', label: 'Rejected' },
                 ]}
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value)
+                  setPage(1)
+                }}
               />
             </div>
             <div className="w-full sm:w-36 flex-shrink-0">
@@ -340,7 +408,27 @@ export default function MembersPage() {
                   { value: 'pending', label: 'Pending' },
                 ]}
                 value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value)}
+                onChange={(e) => {
+                  setPaymentFilter(e.target.value)
+                  setPage(1)
+                }}
+              />
+            </div>
+            <div className="w-full sm:w-44 flex-shrink-0">
+              <Select
+                icon={ArrowUpDown}
+                placeholder="Sort by"
+                options={[
+                  { value: 'created-desc', label: 'Newest First' },
+                  { value: 'created-asc', label: 'Oldest First' },
+                  { value: 'name-asc', label: 'Name (A to Z)' },
+                  { value: 'name-desc', label: 'Name (Z to A)' },
+                ]}
+                value={sortSelection}
+                onChange={(e) => {
+                  setSortSelection(e.target.value)
+                  setPage(1)
+                }}
               />
             </div>
             {hasActiveFilters && (
@@ -361,13 +449,38 @@ export default function MembersPage() {
 
       {/* Table */}
       <Card padding={false}>
-        <DataTable
-          columns={columns}
-          data={filteredApplications}
-          minWidth="1000px"
-          emptyMessage="No applications found matching your selected filters"
-          emptyIcon={Users}
-        />
+        <div
+          className={cn(
+            'transition-opacity duration-150',
+            isFetching && !isLoading && 'opacity-60 pointer-events-none'
+          )}
+        >
+          <DataTable
+            columns={columns}
+            data={applications}
+            minWidth="1000px"
+            emptyMessage="No applications found matching your selected filters"
+            emptyIcon={Users}
+          />
+        </div>
+
+        {total > 0 && (
+          <Pagination
+            page={page}
+            limit={limit}
+            total={total}
+            totalPages={totalPages}
+            hasNextPage={pagination.hasNextPage}
+            hasPrevPage={pagination.hasPrevPage}
+            onPageChange={(newPage) => setPage(newPage)}
+            onLimitChange={(newLimit) => {
+              setLimit(newLimit)
+              setPage(1)
+            }}
+            limitOptions={[10, 20, 50, 100]}
+            isLoading={isFetching && !isLoading}
+          />
+        )}
       </Card>
 
       {/* Reject Reason Modal */}

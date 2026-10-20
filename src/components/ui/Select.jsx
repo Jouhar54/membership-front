@@ -49,7 +49,7 @@ const Select = forwardRef(
 
     // Normalize options so Select supports both string arrays and object arrays
     const normalizedOptions = useMemo(() => {
-      return (options || []).map((opt) => {
+      const base = (options || []).map((opt) => {
         if (typeof opt === 'string' || typeof opt === 'number') {
           return { value: String(opt), label: String(opt) }
         }
@@ -59,7 +59,20 @@ const Select = forwardRef(
           label: opt?.label !== undefined && opt?.label !== null ? String(opt.label) : String(opt?.value || ''),
         }
       })
-    }, [options])
+
+      // If internalValue has a non-empty value that isn't in base options (e.g. Lakshadweep),
+      // dynamically include it so it is visibly selected and properly submitted in the form
+      if (
+        internalValue !== '' &&
+        internalValue !== undefined &&
+        internalValue !== null &&
+        !base.some((opt) => String(opt.value).toLowerCase() === String(internalValue).toLowerCase())
+      ) {
+        base.push({ value: String(internalValue), label: String(internalValue) })
+      }
+
+      return base
+    }, [options, internalValue])
 
     // Find current selected option
     const selectedOption = normalizedOptions.find(
@@ -366,8 +379,20 @@ const Select = forwardRef(
                       )
                     })
                   ) : (
-                    <div className="py-4 px-3 text-center text-xs text-[var(--text-tertiary)]">
-                      No matching options found
+                    <div className="py-3 px-2 text-center text-xs text-[var(--text-tertiary)] space-y-2">
+                      <p>No matching options found</p>
+                      {searchTerm.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSelect(searchTerm.trim())
+                            setSearchTerm('')
+                          }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-medium text-xs transition-colors cursor-pointer"
+                        >
+                          Use "{searchTerm.trim()}"
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

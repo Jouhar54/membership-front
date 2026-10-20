@@ -3,7 +3,7 @@ import { cn } from '../../utils'
 import { Eye, EyeOff } from 'lucide-react'
 
 const Input = forwardRef(
-  ({ label, error, icon: Icon, className = '', type = 'text', id, required, ...props }, ref) => {
+  ({ label, error, icon: Icon, rightElement, className = '', type = 'text', id, required, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false)
     const inputId = id || (typeof label === 'string' ? label.toLowerCase().replace(/\s+/g, '-') : undefined)
     const isPassword = type === 'password'
@@ -35,13 +35,18 @@ const Input = forwardRef(
               'focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               Icon && 'pl-10',
-              isPassword && 'pr-10',
+              (isPassword || rightElement) && 'pr-10',
               error && 'border-error focus:ring-error/30 focus:border-error',
               className
             )}
             {...props}
           />
-          {isPassword && (
+          {rightElement && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+              {rightElement}
+            </div>
+          )}
+          {isPassword && !rightElement && (
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}

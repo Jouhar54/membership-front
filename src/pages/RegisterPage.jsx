@@ -29,6 +29,7 @@ import {
   Award,
   Check,
   Users,
+  Loader2,
 } from 'lucide-react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { applicationSchema } from '../lib/validations'
@@ -43,7 +44,8 @@ import Modal from '../components/ui/Modal'
 import DeveloperCTA from '../components/common/DeveloperCTA'
 import ImageCropModal from '../components/ui/ImageCropModal'
 import toast from 'react-hot-toast'
-import { showApiErrorToast } from '../utils'
+import { showApiErrorToast, cn } from '../utils'
+import { fetchLocationByPin } from '../utils/pincode'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -55,6 +57,11 @@ export default function RegisterPage() {
   const [paymentPreview, setPaymentPreview] = useState(null)
   const [submittedApp, setSubmittedApp] = useState(null)
   const [confirmingBatch, setConfirmingBatch] = useState(null)
+
+  // PIN code auto-lookup state
+  const [pinLookupStatus, setPinLookupStatus] = useState(null) // null | 'loading' | 'success' | 'error'
+  const [pinLookupMessage, setPinLookupMessage] = useState('')
+  const [availablePostOffices, setAvailablePostOffices] = useState([])
 
   const todayStr = new Date().toISOString().split('T')[0]
 
@@ -114,6 +121,55 @@ export default function RegisterPage() {
       showApiErrorToast(error, 'Submission failed. Please try again.')
     },
   })
+
+  // Auto-fetch location details when user enters a 6-digit PIN code
+  const handlePinLookup = async (pinValue) => {
+    const clean = String(pinValue || '').trim()
+    if (clean.length !== 6 || !/^\d{6}$/.test(clean)) {
+      setPinLookupStatus(null)
+      setPinLookupMessage('')
+      setAvailablePostOffices([])
+      return
+    }
+
+    setPinLookupStatus('loading')
+    setPinLookupMessage('Locating area...')
+    const result = await fetchLocationByPin(clean)
+
+    if (result.success) {
+      setPinLookupStatus('success')
+      setPinLookupMessage(`${result.district}, ${result.state}`)
+      setAvailablePostOffices(result.postOffices || [])
+
+      if (result.district) {
+        setValue('district', result.district, { shouldValidate: true })
+      }
+      if (result.state) {
+        setValue('state', result.state, { shouldValidate: true })
+      }
+      if (result.primaryPostOffice && !watch('post')) {
+        setValue('post', result.primaryPostOffice, { shouldValidate: true })
+      }
+      if (result.taluk && !watch('thaluk')) {
+        setValue('thaluk', result.taluk, { shouldValidate: true })
+      }
+      toast.success(`Location detected: ${result.district}, ${result.state}`, {
+        id: 'pin-found',
+        duration: 2500,
+      })
+    } else {
+      setPinLookupStatus('error')
+      setPinLookupMessage(result.error || 'Location not found')
+      setAvailablePostOffices([])
+    }
+  }
+
+  const handleSelectPostOffice = (po) => {
+    setValue('post', po.name, { shouldValidate: true })
+    if (po.block && po.block !== 'NA') {
+      setValue('thaluk', po.block, { shouldValidate: true })
+    }
+  }
 
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0]
@@ -559,6 +615,25 @@ export default function RegisterPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
+              label="PIN Code"
+              icon={MapPin}
+              placeholder="676505"
+              maxLength={6}
+              required
+              error={errors.pin?.message}
+              rightElement={
+                pinLookupStatus === 'loading' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-primary-500" />
+                ) : pinLookupStatus === 'success' ? (
+                  <Check className="w-4 h-4 text-emerald-500" />
+                ) : null
+              }
+              {...register('pin', {
+                onChange: (e) => handlePinLookup(e.target.value),
+              })}
+            />
+
+            <Input
               label="Post (Post Office)"
               icon={Building2}
               placeholder="Enter post office"
@@ -566,17 +641,63 @@ export default function RegisterPage() {
               error={errors.post?.message}
               {...register('post')}
             />
-
-            <Input
-              label="PIN Code"
-              icon={MapPin}
-              placeholder="676505"
-              maxLength={6}
-              required
-              error={errors.pin?.message}
-              {...register('pin')}
-            />
           </div>
+
+          {/* PIN Lookup feedback & multiple post offices picker */}
+          {pinLookupStatus === 'loading' && (
+            <div className="flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400 bg-primary-50/70 dark:bg-primary-950/40 border border-primary-200/60 dark:border-primary-800/40 rounded-xl px-3.5 py-2.5">
+              <Loader2 className="w-4 h-4 animate-spin text-primary-600 dark:text-primary-400 shrink-0" />
+              <span>Fetching location details for PIN code...</span>
+            </div>
+          )}
+
+          {pinLookupStatus === 'error' && (
+            <div className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 rounded-xl px-3.5 py-2.5">
+              <span>{pinLookupMessage || 'Could not auto-fetch location for this PIN code. Please enter manually.'}</span>
+            </div>
+          )}
+
+          {pinLookupStatus === 'success' && (
+            <div className="space-y-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/40 rounded-xl p-3.5 text-xs">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  Auto-detected: <strong>{pinLookupMessage}</strong>
+                </span>
+                <span className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 font-medium">
+                  District & State auto-filled
+                </span>
+              </div>
+
+              {availablePostOffices.length > 1 && (
+                <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/30 space-y-1.5">
+                  <div className="text-[11px] font-medium text-[var(--text-secondary)]">
+                    Select your Post Office:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availablePostOffices.map((po) => {
+                      const isSelected = (watch('post') || '').trim().toLowerCase() === po.name.trim().toLowerCase()
+                      return (
+                        <button
+                          key={po.name}
+                          type="button"
+                          onClick={() => handleSelectPostOffice(po)}
+                          className={cn(
+                            'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer',
+                            isSelected
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-white dark:bg-surface-800 border border-emerald-200 dark:border-emerald-800/60 text-surface-700 dark:text-surface-200 hover:border-emerald-500'
+                          )}
+                        >
+                          {po.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input
@@ -615,6 +736,7 @@ export default function RegisterPage() {
               error={errors.district?.message}
               placeholder="Select district..."
               options={DISTRICTS.map((d) => ({ value: d, label: d }))}
+              value={watch('district')}
               {...register('district')}
             />
 
@@ -624,7 +746,7 @@ export default function RegisterPage() {
               required
               error={errors.state?.message}
               placeholder="Select state..."
-              defaultValue="Kerala"
+              value={watch('state')}
               options={STATES.map((s) => ({ value: s, label: s }))}
               {...register('state')}
             />

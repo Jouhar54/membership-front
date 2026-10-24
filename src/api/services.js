@@ -6,7 +6,9 @@
  *  Each helper unwraps `.data.data` and maps fields to the flat shapes
  *  the UI components already expect (e.g. fullName, batchName, membershipStatus …).
  */
-import apiClient from './client'
+import apiClient, { api } from './client'
+
+export { apiClient, api }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -469,6 +471,7 @@ export const applicationsApi = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 60000,
     })
     const payload = unwrap(res)
     return normaliseApplication(payload.application || payload)
@@ -518,6 +521,7 @@ export const applicationsApi = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 60000,
     })
     const payload = unwrap(res)
     return normaliseApplication(payload.application || payload)

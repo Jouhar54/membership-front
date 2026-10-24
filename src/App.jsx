@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
+import { api } from './api/client'
 import { ProtectedRoute, GuestRoute } from './routes/ProtectedRoute'
 import AuthLayout from './components/layout/AuthLayout'
 import DashboardLayout from './components/layout/DashboardLayout'
@@ -16,6 +18,9 @@ import ApprovalsPage from './pages/ApprovalsPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
+  useEffect(() => {
+    api.get('/health').catch(() => {})
+  }, [])
   return (
     <>
       <Routes>

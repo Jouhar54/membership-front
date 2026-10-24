@@ -52,10 +52,15 @@ export default function BatchAdminForm({ defaultValues, onSubmit, isPending, isE
     onSubmit(data)
   }
 
+  const onFormSubmit = (e) => {
+    e?.preventDefault()
+    handleSubmit(handleFormSubmit)(e)
+  }
+
   const selectedBatchId = watch('batchId')
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form onSubmit={onFormSubmit} className="space-y-4">
       <Input
         label="Full Name"
         placeholder="JOHN DOE"

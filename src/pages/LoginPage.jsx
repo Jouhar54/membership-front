@@ -33,6 +33,11 @@ export default function LoginPage() {
     }
   }
 
+  const handleFormSubmit = (e) => {
+    e?.preventDefault()
+    handleSubmit(onSubmit)(e)
+  }
+
   return (
     <div className="h-full flex flex-col justify-center overflow-y-auto">
       <div className="my-auto py-6">
@@ -45,7 +50,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleFormSubmit} className="space-y-4">
           <Input
             label="Email Address"
             type="email"

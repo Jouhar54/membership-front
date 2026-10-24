@@ -336,6 +336,11 @@ export default function EditApplicationPage() {
     updateMutation.mutate(payload)
   }
 
+  const handleFormSubmit = (e) => {
+    e?.preventDefault()
+    handleSubmit(onSubmit)(e)
+  }
+
   if (isAppLoading) return <PageLoader />
 
   if (appError || !application) {
@@ -478,7 +483,7 @@ export default function EditApplicationPage() {
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleFormSubmit} className="space-y-6">
         {/* ─── SECTION 1: Profile Photo ─────────────────────────── */}
         <div className="bg-[var(--bg-primary)] p-4 sm:p-5 rounded-2xl border border-[var(--border-color)] space-y-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] pb-2 border-b border-[var(--border-color)]">

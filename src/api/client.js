@@ -7,10 +7,12 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'https://membership-back-lquq.o
 const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 30000,
   // Required so the browser sends the httpOnly refreshToken cookie
   withCredentials: true,
 })
+
+export const api = apiClient
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 export const tokenStore = {

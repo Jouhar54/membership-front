@@ -254,6 +254,11 @@ export default function RegisterPage() {
     applyMutation.mutate(payload)
   }
 
+  const handleFormSubmit = (e) => {
+    e?.preventDefault()
+    handleSubmit(onSubmit)(e)
+  }
+
   if (submittedApp) {
     return (
       <div className="text-center py-6 space-y-6">
@@ -395,7 +400,7 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleFormSubmit} className="space-y-6">
         {/* ─── SECTION 1: Personal Details ───────────────────────── */}
         <div className="bg-[var(--bg-primary)] p-4 sm:p-5 rounded-2xl border border-[var(--border-color)] space-y-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] pb-2 border-b border-[var(--border-color)]">

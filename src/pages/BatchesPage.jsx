@@ -215,6 +215,11 @@ export default function BatchesPage() {
     }
   }
 
+  const handleFormSubmit = (e) => {
+    e?.preventDefault()
+    handleSubmit(onSubmit)(e)
+  }
+
   const openEdit = (batch) => {
     setEditBatch(batch)
     setValue('name', batch.name)
@@ -476,7 +481,7 @@ export default function BatchesPage() {
         title={editBatch ? 'Edit Batch' : 'Create New Batch'}
         size="sm"
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleFormSubmit} className="space-y-4">
           <Input
             label="Batch Name"
             placeholder="e.g., Al-Falah 2024"

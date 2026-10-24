@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, CheckCircle2, XCircle, CreditCard,
-  Eye, Users, RotateCcw, ExternalLink, Receipt, ArrowUpDown,
+  Eye, Users, RotateCcw, ExternalLink, Receipt, ArrowUpDown, Edit3,
 } from 'lucide-react'
 import { applicationsApi, batchesApi } from '../api/services'
 import { useAuth } from '../context/AuthContext'
@@ -23,6 +24,7 @@ import { formatPhone, formatDate, cn, showApiErrorToast } from '../utils'
 import toast from 'react-hot-toast'
 
 export default function MembersPage() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const isBatchAdmin = user?.role === 'batch_admin'
   const userBatchId = user?.batchId || null
@@ -262,17 +264,32 @@ export default function MembersPage() {
     {
       key: 'actions',
       label: 'Actions',
-      minWidth: '110px',
-      width: '110px',
-      render: (_, row) => (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="xs"
-            icon={Eye}
-            onClick={(e) => { e.stopPropagation(); setViewApplication(row) }}
-            title="View Details"
-          />
+      minWidth: '135px',
+      width: '135px',
+      render: (_, row) => {
+        const canEdit = !isBatchAdmin || !userBatchId || String(row.batchId) === String(userBatchId)
+        return (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="xs"
+              icon={Eye}
+              onClick={(e) => { e.stopPropagation(); setViewApplication(row) }}
+              title="View Details"
+            />
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="xs"
+                icon={Edit3}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate(`/edit-application/${row.id}`)
+                }}
+                title="Edit Application Details"
+                className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-950/30"
+              />
+            )}
           {row.paymentStatus === 'pending' && row.membershipStatus !== 'rejected' && (
             <Button
               variant="ghost"
@@ -329,8 +346,9 @@ export default function MembersPage() {
               title="Undo Rejection (Restore to Pending)"
             />
           )}
-        </div>
-      ),
+          </div>
+        )
+      },
     },
   ]
 
@@ -608,6 +626,20 @@ export default function MembersPage() {
                   <Badge variant={viewApplication.paymentStatus} />
                 </div>
               </div>
+              {(!isBatchAdmin || !userBatchId || String(viewApplication.batchId) === String(userBatchId)) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Edit3}
+                  onClick={() => {
+                    setViewApplication(null)
+                    navigate(`/edit-application/${viewApplication.id}`)
+                  }}
+                  className="shrink-0"
+                >
+                  Edit Application
+                </Button>
+              )}
             </div>
 
             {/* Rejection Details Banner if Rejected */}

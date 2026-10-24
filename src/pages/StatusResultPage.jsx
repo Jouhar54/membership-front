@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Clock, CheckCircle2, XCircle, Download, ArrowLeft, AlertCircle, Edit3 } from 'lucide-react'
 import { applicationsApi } from '../api/services'
+import { useAuth } from '../context/AuthContext'
 import { PageLoader } from '../components/ui/LoadingStates'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
@@ -9,12 +10,18 @@ import Button from '../components/ui/Button'
 
 export default function StatusResultPage() {
   const { id } = useParams()
+  const { user } = useAuth()
 
   const { data: application, isLoading, error } = useQuery({
     queryKey: ['application-status', id],
     queryFn: () => applicationsApi.getById(id),
     retry: 1,
   })
+
+  const isAdmin = user?.role === 'admin'
+  const isBatchAdmin = user?.role === 'batch_admin'
+  const appBatchId = application?.batchId || application?.batch?._id || application?.batch?.id || application?.batch
+  const canAdminEdit = isAdmin || (isBatchAdmin && user?.batchId && String(user.batchId) === String(appBatchId))
 
   if (isLoading) return <PageLoader />
 
@@ -138,10 +145,10 @@ export default function StatusResultPage() {
           <h3 className="text-base font-semibold text-[var(--text-primary)] font-display">
             Application Details
           </h3>
-          {membershipStatus !== 'approved' && (
+          {(membershipStatus !== 'approved' || canAdminEdit) && (
             <Link to={`/edit-application/${id}`}>
               <Button variant="outline" size="xs" icon={Edit3}>
-                Edit Details
+                {membershipStatus === 'approved' ? 'Edit Details (Admin)' : 'Edit Details'}
               </Button>
             </Link>
           )}

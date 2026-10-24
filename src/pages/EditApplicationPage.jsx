@@ -37,6 +37,7 @@ import { batchesApi, applicationsApi } from '../api/services'
 import { DISTRICTS, BLOOD_GROUPS, JOB_TYPES, STATES } from '../constants'
 import { showApiErrorToast, cn } from '../utils'
 import { fetchLocationByPin } from '../utils/pincode'
+import { useAuth } from '../context/AuthContext'
 import Input from '../components/ui/Input'
 import PhoneNumberInput from '../components/ui/PhoneNumberInput'
 import Select from '../components/ui/Select'
@@ -52,6 +53,10 @@ export default function EditApplicationPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  const isAdmin = user?.role === 'admin'
+  const isBatchAdmin = user?.role === 'batch_admin'
 
   const [photoPreview, setPhotoPreview] = useState(null)
   const [rawPhotoSrc, setRawPhotoSrc] = useState(null)
@@ -162,6 +167,11 @@ export default function EditApplicationPage() {
     }
   }, [application, reset])
 
+  const appBatchId = application?.batchId || application?.batch?._id || application?.batch?.id || application?.batch
+  const isBatchMatch = isBatchAdmin && user?.batchId && String(user.batchId) === String(appBatchId)
+  const isAuthorizedAdmin = isAdmin || isBatchMatch
+  const isUnauthorizedBatchAdmin = isBatchAdmin && application && !isBatchMatch
+
   const selectedJobType = watch('jobType')
   const phoneValue = watch('phone_number') || watch('phone')
 
@@ -170,12 +180,22 @@ export default function EditApplicationPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['application-status', id] })
       queryClient.invalidateQueries({ queryKey: ['application-edit', id] })
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-members'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
       toast.success(
-        application?.membershipStatus === 'rejected'
-          ? 'Application resubmitted successfully for review!'
-          : 'Application updated successfully!'
+        isAuthorizedAdmin
+          ? 'Member details updated successfully!'
+          : application?.membershipStatus === 'rejected'
+            ? 'Application resubmitted successfully for review!'
+            : 'Application updated successfully!'
       )
-      navigate(`/status/${id}`)
+      if (isAuthorizedAdmin) {
+        navigate('/admin/members')
+      } else {
+        navigate(`/status/${id}`)
+      }
     },
     onError: (error) => {
       showApiErrorToast(error, 'Update failed. Please review your details and try again.')
@@ -340,7 +360,28 @@ export default function EditApplicationPage() {
     )
   }
 
-  if (application.membershipStatus === 'approved') {
+  if (isUnauthorizedBatchAdmin) {
+    return (
+      <div className="text-center py-10 space-y-4">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-error-50 dark:bg-error-950/30 text-error mb-2">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-bold text-[var(--text-primary)] font-display">
+          Access Restricted
+        </h2>
+        <p className="text-sm text-[var(--text-secondary)] max-w-sm mx-auto">
+          As a Batch Admin, you can only edit membership applications belonging to your assigned batch ({user?.batchName || 'your batch'}).
+        </p>
+        <Link to="/admin/members">
+          <Button variant="primary" size="sm" icon={ArrowLeft}>
+            Back to Members List
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
+  if (application.membershipStatus === 'approved' && !isAuthorizedAdmin) {
     return (
       <div className="text-center py-10 space-y-4">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-success-50 dark:bg-success-950/30 text-success mb-2">
@@ -366,29 +407,62 @@ export default function EditApplicationPage() {
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <Link
-          to={`/status/${id}`}
+          to={isAuthorizedAdmin ? '/admin/members' : `/status/${id}`}
           className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Status</span>
+          <span>{isAuthorizedAdmin ? 'Back to Members List' : 'Back to Status'}</span>
         </Link>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
-          Edit Mode
+        <span
+          className={cn(
+            'text-xs font-semibold px-2.5 py-1 rounded-full',
+            isAuthorizedAdmin
+              ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20'
+              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+          )}
+        >
+          {isAuthorizedAdmin ? (isAdmin ? 'Admin Edit Mode' : 'Batch Admin Edit Mode') : 'Edit Mode'}
         </span>
       </div>
 
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-[var(--text-primary)] font-display">
-          Edit Application Details
+          {isAuthorizedAdmin ? 'Edit Member Application' : 'Edit Application Details'}
         </h1>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Update your application details below.
+          {isAuthorizedAdmin
+            ? 'Update member profile details, contact info, and certificates.'
+            : 'Update your application details below.'}
         </p>
       </div>
 
+      {/* Admin Mode Notice Banner if authorized admin */}
+      {isAuthorizedAdmin && (
+        <div className="p-4 rounded-xl border border-primary-500/30 bg-primary-500/10 text-sm space-y-1">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-semibold">
+              <Sparkles className="w-4 h-4 flex-shrink-0" />
+              <span>{isAdmin ? 'Super Admin Edit Mode' : 'Batch Admin Edit Mode'}</span>
+            </div>
+            {application.membershipStatus && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full capitalize bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-primary)]">
+                Status: <strong>{application.membershipStatus}</strong>
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--text-secondary)] text-xs mt-1">
+            Editing application for <strong>{application.fullName}</strong> ({application.batchName || 'Assigned Batch'}).
+            {application.membershipId && (
+              <> Membership ID: <span className="font-mono font-bold text-success">{application.membershipId}</span>.</>
+            )}
+            {' '}Saved changes will immediately update this membership record.
+          </p>
+        </div>
+      )}
+
       {/* Rejection Notice Banner if applicable */}
-      {application.membershipStatus === 'rejected' && (
+      {!isAuthorizedAdmin && application.membershipStatus === 'rejected' && (
         <div className="p-4 rounded-xl border border-error/30 bg-error/10 text-sm space-y-2">
           <div className="flex items-center gap-2 text-error font-semibold">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -786,11 +860,11 @@ export default function EditApplicationPage() {
                 control={control}
                 render={({ field }) => (
                   <Select
-                    label="Select Your Batch"
+                    label="Select Batch"
                     icon={GraduationCap}
                     required
                     searchable={true}
-                    placeholder="Choose your passed out batch"
+                    placeholder="Choose batch"
                     options={batches.map((b) => ({
                       value: String(b.id),
                       label: b.year ? `${b.name} (${b.year})` : b.name,
@@ -897,7 +971,7 @@ export default function EditApplicationPage() {
 
         {/* Action Buttons */}
         <div className="pt-2 flex flex-col sm:flex-row gap-3">
-          <Link to={`/status/${id}`} className="flex-1 order-2 sm:order-1">
+          <Link to={isAuthorizedAdmin ? '/admin/members' : `/status/${id}`} className="flex-1 order-2 sm:order-1">
             <Button type="button" variant="secondary" className="w-full">
               Cancel
             </Button>
@@ -910,7 +984,11 @@ export default function EditApplicationPage() {
             loading={updateMutation.isPending}
             disabled={updateMutation.isPending}
           >
-            {updateMutation.isPending ? 'Saving Changes...' : 'Save & Update Details'}
+            {updateMutation.isPending
+              ? 'Saving Changes...'
+              : isAuthorizedAdmin
+                ? 'Save Member Details'
+                : 'Save & Update Details'}
           </Button>
         </div>
       </form>

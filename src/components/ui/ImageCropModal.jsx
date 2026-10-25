@@ -21,7 +21,9 @@ export default function ImageCropModal({
   fileName = 'profile-photo.jpg',
   onClose,
   onCropSave,
+  onSave,
 }) {
+  const saveCallback = onCropSave || onSave
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
@@ -58,7 +60,9 @@ export default function ImageCropModal({
       )
 
       if (croppedResult) {
-        onCropSave(croppedResult.file, croppedResult.previewUrl)
+        if (typeof saveCallback === 'function') {
+          saveCallback(croppedResult.file, croppedResult.previewUrl)
+        }
         toast.success('Photo cropped successfully!')
         onClose()
       }

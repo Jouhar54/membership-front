@@ -1008,6 +1008,7 @@ export default function EditApplicationPage() {
             setIsCropModalOpen(false)
             setRawPhotoSrc(null)
           }}
+          onCropSave={handleCropSave}
           onSave={handleCropSave}
         />
       )}

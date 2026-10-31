@@ -151,4 +151,37 @@ export function showApiErrorToast(err, fallback = 'Something went wrong') {
   toast.error(message)
 }
 
+/**
+ * Trigger browser file download from Blob object
+ */
+export function downloadBlob(blob, defaultFilename) {
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.style.display = 'none'
+  a.href = url
+  a.download = defaultFilename
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => {
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  }, 150)
+}
+
+/**
+ * Extract error message from Axios error even when responseType was blob
+ */
+export async function extractBlobErrorMessage(err, fallback = 'Failed to download PDF.') {
+  if (err?.response?.data instanceof Blob) {
+    try {
+      const text = await err.response.data.text()
+      const json = JSON.parse(text)
+      if (json?.message) return json.message
+    } catch {
+      // not json
+    }
+  }
+  return getErrorMessage(err, fallback)
+}
+
 

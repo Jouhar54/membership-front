@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, CheckCircle2, XCircle, CreditCard,
-  Eye, Users, RotateCcw, ExternalLink, Receipt, ArrowUpDown, Edit3,
+  Eye, Users, RotateCcw, ExternalLink, Receipt, ArrowUpDown, Edit3, FileDown,
+  Filter, X,
 } from 'lucide-react'
-import { applicationsApi, batchesApi } from '../api/services'
+import { applicationsApi, batchesApi, exportApi } from '../api/services'
 import { useAuth } from '../context/AuthContext'
 import { useDebounce } from '../hooks/useDebounce'
 import Card from '../components/ui/Card'
@@ -20,7 +21,8 @@ import { ConfirmModal } from '../components/ui/Modal'
 import Modal from '../components/ui/Modal'
 import RejectReasonModal from '../components/ui/RejectReasonModal'
 import { PageLoader } from '../components/ui/LoadingStates'
-import { formatPhone, formatDate, cn, showApiErrorToast } from '../utils'
+import { DISTRICTS } from '../constants'
+import { formatPhone, formatDate, cn, showApiErrorToast, downloadBlob, extractBlobErrorMessage } from '../utils'
 import toast from 'react-hot-toast'
 
 export default function MembersPage() {
@@ -34,16 +36,36 @@ export default function MembersPage() {
   const [batchFilter, setBatchFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [paymentFilter, setPaymentFilter] = useState('')
+  const [districtFilter, setDistrictFilter] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [sortSelection, setSortSelection] = useState('created-desc')
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+  const [draftFilters, setDraftFilters] = useState({
+    batch: '',
+    status: '',
+    payment: '',
+    district: '',
+    dateFrom: '',
+    dateTo: '',
+  })
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
   const [confirmAction, setConfirmAction] = useState(null)
   const [viewApplication, setViewApplication] = useState(null)
+  const [isExportingAll, setIsExportingAll] = useState(false)
+  const [exportingMemberId, setExportingMemberId] = useState(null)
   const queryClient = useQueryClient()
 
   const { data: batches = [] } = useQuery({
     queryKey: ['batches'],
     queryFn: batchesApi.getAll,
+  })
+
+  const { data: dbDistricts = [] } = useQuery({
+    queryKey: ['districts'],
+    queryFn: applicationsApi.getDistricts,
+    staleTime: 5 * 60 * 1000,
   })
 
   // Derive sortBy & sortOrder from sortSelection
@@ -84,6 +106,15 @@ export default function MembersPage() {
     if (paymentFilter && paymentFilter !== 'all') {
       params.paymentStatus = paymentFilter
     }
+    if (districtFilter && districtFilter !== 'all') {
+      params.district = districtFilter
+    }
+    if (dateFrom) {
+      params.startDate = dateFrom
+    }
+    if (dateTo) {
+      params.endDate = dateTo
+    }
     if (sortBy) {
       params.sortBy = sortBy
     }
@@ -98,6 +129,9 @@ export default function MembersPage() {
     effectiveBatch,
     statusFilter,
     paymentFilter,
+    districtFilter,
+    dateFrom,
+    dateTo,
     sortBy,
     sortOrder,
   ])
@@ -109,6 +143,24 @@ export default function MembersPage() {
   })
 
   const applications = data?.applications || []
+
+  // Merge dynamic districts from backend database + loaded applications + static standard DISTRICTS
+  const districtList = useMemo(() => {
+    const set = new Set(DISTRICTS)
+    if (Array.isArray(dbDistricts)) {
+      dbDistricts.forEach((d) => {
+        if (d && typeof d === 'string' && d.trim()) set.add(d.trim())
+      })
+    }
+    if (Array.isArray(applications)) {
+      applications.forEach((app) => {
+        if (app?.district && typeof app.district === 'string' && app.district.trim()) {
+          set.add(app.district.trim())
+        }
+      })
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [dbDistricts, applications])
   const total = data?.total ?? 0
   const totalPages = data?.totalPages ?? 1
   const pagination = data?.pagination ?? {
@@ -182,20 +234,149 @@ export default function MembersPage() {
     },
   })
 
+  const handleExportMembersPdf = async () => {
+    if (isExportingAll) return
+    setIsExportingAll(true)
+    const toastId = toast.loading('Generating members PDF report...')
+    try {
+      const exportParams = {}
+      const cleanSearch = debouncedSearch?.trim()
+      if (cleanSearch) exportParams.search = cleanSearch
+      if (effectiveBatch && effectiveBatch !== 'all') {
+        exportParams.batch = effectiveBatch
+        exportParams.batchId = effectiveBatch
+      }
+      if (statusFilter && statusFilter !== 'all') {
+        exportParams.status = statusFilter
+        exportParams.membershipStatus = statusFilter
+      }
+      if (paymentFilter && paymentFilter !== 'all') {
+        exportParams.paymentStatus = paymentFilter
+      }
+      if (districtFilter && districtFilter !== 'all') {
+        exportParams.district = districtFilter
+      }
+      if (dateFrom) exportParams.startDate = dateFrom
+      if (dateTo) exportParams.endDate = dateTo
+      if (sortBy) exportParams.sortBy = sortBy
+      if (sortOrder) exportParams.sortOrder = sortOrder
+
+      const blob = await exportApi.downloadMembersPdf(exportParams)
+      const today = new Date().toISOString().split('T')[0]
+      const filename = `aalia-members-report-${today}.pdf`
+      downloadBlob(blob, filename)
+      toast.success('Members PDF report downloaded successfully!', { id: toastId })
+    } catch (err) {
+      const errorMsg = await extractBlobErrorMessage(err, 'Failed to download members PDF report.')
+      toast.error(errorMsg, { id: toastId })
+    } finally {
+      setIsExportingAll(false)
+    }
+  }
+
+  const handleExportSingleMember = async (member) => {
+    if (exportingMemberId) return
+    setExportingMemberId(member.id)
+    const toastId = toast.loading(`Generating PDF for ${member.fullName}...`)
+    try {
+      const blob = await exportApi.downloadMemberPdf(member.id)
+      const safeName = (member.membershipId || member.fullName || 'member')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+      const today = new Date().toISOString().split('T')[0]
+      const filename = `aalia-member-${safeName}-${today}.pdf`
+      downloadBlob(blob, filename)
+      toast.success('Member PDF dossier downloaded successfully!', { id: toastId })
+    } catch (err) {
+      const errorMsg = await extractBlobErrorMessage(err, 'Failed to download member PDF.')
+      toast.error(errorMsg, { id: toastId })
+    } finally {
+      setExportingMemberId(null)
+    }
+  }
+
   const hasActiveFilters = Boolean(
     search ||
     (!isBatchAdmin && batchFilter) ||
     statusFilter ||
     paymentFilter ||
+    districtFilter ||
+    dateFrom ||
+    dateTo ||
     sortSelection !== 'created-desc' ||
     limit !== 10
   )
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (!isBatchAdmin && batchFilter) count++
+    if (statusFilter) count++
+    if (paymentFilter) count++
+    if (districtFilter) count++
+    if (dateFrom || dateTo) count++
+    return count
+  }, [isBatchAdmin, batchFilter, statusFilter, paymentFilter, districtFilter, dateFrom, dateTo])
+
+  const draftFilterCount = useMemo(() => {
+    let count = 0
+    if (!isBatchAdmin && draftFilters.batch) count++
+    if (draftFilters.status) count++
+    if (draftFilters.payment) count++
+    if (draftFilters.district) count++
+    if (draftFilters.dateFrom || draftFilters.dateTo) count++
+    return count
+  }, [isBatchAdmin, draftFilters])
+
+  const handleOpenFilterModal = () => {
+    setDraftFilters({
+      batch: batchFilter,
+      status: statusFilter,
+      payment: paymentFilter,
+      district: districtFilter,
+      dateFrom,
+      dateTo,
+    })
+    setIsFilterModalOpen(true)
+  }
+
+  const handleApplyFilters = () => {
+    setBatchFilter(draftFilters.batch)
+    setStatusFilter(draftFilters.status)
+    setPaymentFilter(draftFilters.payment)
+    setDistrictFilter(draftFilters.district)
+    setDateFrom(draftFilters.dateFrom)
+    setDateTo(draftFilters.dateTo)
+    setPage(1)
+    setIsFilterModalOpen(false)
+  }
+
+  const handleResetDraftFilters = () => {
+    setDraftFilters({
+      batch: '',
+      status: '',
+      payment: '',
+      district: '',
+      dateFrom: '',
+      dateTo: '',
+    })
+  }
 
   const handleResetFilters = () => {
     setSearch('')
     if (!isBatchAdmin) setBatchFilter('')
     setStatusFilter('')
     setPaymentFilter('')
+    setDistrictFilter('')
+    setDateFrom('')
+    setDateTo('')
+    setDraftFilters({
+      batch: '',
+      status: '',
+      payment: '',
+      district: '',
+      dateFrom: '',
+      dateTo: '',
+    })
     setSortSelection('created-desc')
     setLimit(10)
     setPage(1)
@@ -264,8 +445,8 @@ export default function MembersPage() {
     {
       key: 'actions',
       label: 'Actions',
-      minWidth: '135px',
-      width: '135px',
+      minWidth: '160px',
+      width: '160px',
       render: (_, row) => {
         const canEdit = !isBatchAdmin || !userBatchId || String(row.batchId) === String(userBatchId)
         return (
@@ -276,6 +457,19 @@ export default function MembersPage() {
               icon={Eye}
               onClick={(e) => { e.stopPropagation(); setViewApplication(row) }}
               title="View Details"
+            />
+            <Button
+              variant="ghost"
+              size="xs"
+              icon={FileDown}
+              loading={exportingMemberId === row.id}
+              disabled={!!exportingMemberId}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleExportSingleMember(row)
+              }}
+              title="Download Member PDF Dossier"
+              className="text-slate-600 hover:text-primary-600 hover:bg-primary-50 dark:text-slate-300 dark:hover:text-primary-400 dark:hover:bg-primary-950/30"
             />
             {canEdit && (
               <Button
@@ -366,102 +560,206 @@ export default function MembersPage() {
             Manage all incoming applications and approval states
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] bg-[var(--bg-card)] px-3 py-1.5 rounded-xl border border-[var(--border-color)] self-start sm:self-auto shadow-sm">
-          <Users className="w-3.5 h-3.5 text-primary-500" />
-          <span>
-            Showing <strong className="text-[var(--text-primary)]">{applications.length}</strong> of{' '}
-            <strong className="text-[var(--text-primary)]">{total}</strong> applications
-          </span>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] bg-[var(--bg-card)] px-3 py-2 rounded-xl border border-[var(--border-color)] shadow-sm">
+            <Users className="w-3.5 h-3.5 text-primary-500" />
+            <span>
+              Showing <strong className="text-[var(--text-primary)]">{applications.length}</strong> of{' '}
+              <strong className="text-[var(--text-primary)]">{total}</strong> applications
+            </span>
+          </div>
+
+          <Button
+            variant="primary"
+            icon={FileDown}
+            loading={isExportingAll}
+            disabled={isExportingAll}
+            onClick={handleExportMembersPdf}
+            className="shadow-sm font-semibold"
+            title="Download PDF report matching active filters"
+          >
+            Download Members PDF
+          </Button>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search & Filter Bar */}
       <Card>
-        <div className="flex flex-col lg:flex-row gap-3">
-          <div className="flex-1">
-            <Input
-              icon={Search}
-              placeholder="Search by name, email, or phone..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-            />
-          </div>
-          <div className="flex flex-wrap sm:flex-nowrap gap-2.5 items-center">
-            {!isBatchAdmin && (
-              <div className="w-full sm:w-48 flex-shrink-0">
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+            {/* Primary Search Input with full flexible space */}
+            <div className="flex-1 min-w-0">
+              <Input
+                icon={Search}
+                placeholder="Search by name, email, or phone..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Sort Dropdown */}
+              <div className="w-36 sm:w-44 flex-shrink-0">
                 <Select
-                  placeholder="All Batches"
-                  options={batches.map((b) => ({ value: b.id, label: b.name }))}
-                  value={batchFilter}
+                  icon={ArrowUpDown}
+                  placeholder="Sort by"
+                  options={[
+                    { value: 'created-desc', label: 'Newest First' },
+                    { value: 'created-asc', label: 'Oldest First' },
+                    { value: 'name-asc', label: 'Name (A to Z)' },
+                    { value: 'name-desc', label: 'Name (Z to A)' },
+                  ]}
+                  value={sortSelection}
                   onChange={(e) => {
-                    setBatchFilter(e.target.value)
+                    setSortSelection(e.target.value)
                     setPage(1)
                   }}
                 />
               </div>
-            )}
-            <div className="w-full sm:w-36 flex-shrink-0">
-              <Select
-                placeholder="All Status"
-                options={[
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'approved', label: 'Approved' },
-                  { value: 'rejected', label: 'Rejected' },
-                ]}
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </div>
-            <div className="w-full sm:w-36 flex-shrink-0">
-              <Select
-                placeholder="All Payment"
-                options={[
-                  { value: 'paid', label: 'Paid' },
-                  { value: 'pending', label: 'Pending' },
-                ]}
-                value={paymentFilter}
-                onChange={(e) => {
-                  setPaymentFilter(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </div>
-            <div className="w-full sm:w-44 flex-shrink-0">
-              <Select
-                icon={ArrowUpDown}
-                placeholder="Sort by"
-                options={[
-                  { value: 'created-desc', label: 'Newest First' },
-                  { value: 'created-asc', label: 'Oldest First' },
-                  { value: 'name-asc', label: 'Name (A to Z)' },
-                  { value: 'name-desc', label: 'Name (Z to A)' },
-                ]}
-                value={sortSelection}
-                onChange={(e) => {
-                  setSortSelection(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </div>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={RotateCcw}
-                onClick={handleResetFilters}
-                className="text-xs text-[var(--text-secondary)] hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap"
-                title="Reset all filters"
+
+              {/* All Filters Modal Button */}
+              <button
+                type="button"
+                onClick={handleOpenFilterModal}
+                className={cn(
+                  'h-10 px-3 sm:px-3.5 rounded-xl border font-medium text-sm inline-flex items-center gap-2 transition-all select-none cursor-pointer',
+                  activeFilterCount > 0
+                    ? 'border-primary-500 bg-primary-500/10 text-primary-600 dark:text-primary-400 font-semibold shadow-sm'
+                    : 'border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+                )}
+                title="Open filters modal"
               >
-                Clear
-              </Button>
-            )}
+                <Filter className="w-4 h-4 text-primary-500 shrink-0" />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 text-[11px] font-bold rounded-full bg-primary-600 text-white flex items-center justify-center leading-none">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Quick Clear All Button */}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={RotateCcw}
+                  onClick={handleResetFilters}
+                  className="text-xs text-[var(--text-secondary)] hover:text-primary-600 dark:hover:text-primary-400 px-2"
+                  title="Reset search and all filters"
+                >
+                  <span className="hidden md:inline">Reset</span>
+                </Button>
+              )}
+            </div>
           </div>
+
+          {/* Active Filter Pills */}
+          {activeFilterCount > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-[var(--border-color)] text-xs">
+              <span className="text-[var(--text-tertiary)] font-medium mr-1">Active:</span>
+
+              {batchFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                  <span>Batch: {batches.find((b) => b.id === batchFilter)?.name || batchFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBatchFilter('')
+                      setPage(1)
+                    }}
+                    className="hover:text-primary-900 dark:hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {statusFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                  <span>Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter('')
+                      setPage(1)
+                    }}
+                    className="hover:text-primary-900 dark:hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {paymentFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                  <span>Payment: {paymentFilter.charAt(0).toUpperCase() + paymentFilter.slice(1)}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentFilter('')
+                      setPage(1)
+                    }}
+                    className="hover:text-primary-900 dark:hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {districtFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                  <span>District: {districtFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDistrictFilter('')
+                      setPage(1)
+                    }}
+                    className="hover:text-primary-900 dark:hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {(dateFrom || dateTo) && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                  <span>Date: {dateFrom || '...'} to {dateTo || '...'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFrom('')
+                      setDateTo('')
+                      setPage(1)
+                    }}
+                    className="hover:text-primary-900 dark:hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isBatchAdmin) setBatchFilter('')
+                  setStatusFilter('')
+                  setPaymentFilter('')
+                  setDistrictFilter('')
+                  setDateFrom('')
+                  setDateTo('')
+                  setPage(1)
+                }}
+                className="text-[var(--text-tertiary)] hover:text-primary-600 dark:hover:text-primary-400 font-medium ml-1"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -626,20 +924,32 @@ export default function MembersPage() {
                   <Badge variant={viewApplication.paymentStatus} />
                 </div>
               </div>
-              {(!isBatchAdmin || !userBatchId || String(viewApplication.batchId) === String(userBatchId)) && (
+              <div className="flex items-center gap-2 shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
-                  icon={Edit3}
-                  onClick={() => {
-                    setViewApplication(null)
-                    navigate(`/edit-application/${viewApplication.id}`)
-                  }}
-                  className="shrink-0"
+                  icon={FileDown}
+                  loading={exportingMemberId === viewApplication.id}
+                  disabled={!!exportingMemberId}
+                  onClick={() => handleExportSingleMember(viewApplication)}
+                  title="Download Member PDF Dossier"
                 >
-                  Edit Application
+                  Download PDF
                 </Button>
-              )}
+                {(!isBatchAdmin || !userBatchId || String(viewApplication.batchId) === String(userBatchId)) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={Edit3}
+                    onClick={() => {
+                      setViewApplication(null)
+                      navigate(`/edit-application/${viewApplication.id}`)
+                    }}
+                  >
+                    Edit Application
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Rejection Details Banner if Rejected */}
@@ -854,6 +1164,135 @@ export default function MembersPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Filters Modal */}
+      <Modal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        title="Filter Applications"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {!isBatchAdmin && (
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
+                  Batch
+                </label>
+                <Select
+                  placeholder="All Batches"
+                  options={batches.map((b) => ({ value: b.id, label: b.name }))}
+                  value={draftFilters.batch}
+                  onChange={(e) => setDraftFilters((prev) => ({ ...prev, batch: e.target.value }))}
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
+                Membership Status
+              </label>
+              <Select
+                placeholder="All Status"
+                options={[
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'approved', label: 'Approved' },
+                  { value: 'rejected', label: 'Rejected' },
+                ]}
+                value={draftFilters.status}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, status: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
+                Payment Status
+              </label>
+              <Select
+                placeholder="All Payment"
+                options={[
+                  { value: 'paid', label: 'Paid' },
+                  { value: 'pending', label: 'Pending' },
+                ]}
+                value={draftFilters.payment}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, payment: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
+                District
+              </label>
+              <Select
+                placeholder="All Districts"
+                options={districtList.map((d) => ({ value: d, label: d }))}
+                value={draftFilters.district}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, district: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          {/* Registration Date Range */}
+          <div className="pt-3 border-t border-[var(--border-color)]">
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
+              Registration Date Range
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <span className="block text-[11px] text-[var(--text-tertiary)] mb-1">From Date</span>
+                <input
+                  type="date"
+                  aria-label="Registration Start Date"
+                  value={draftFilters.dateFrom}
+                  onChange={(e) => setDraftFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                  className="w-full h-10 px-3 text-xs rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <span className="block text-[11px] text-[var(--text-tertiary)] mb-1">To Date</span>
+                <input
+                  type="date"
+                  aria-label="Registration End Date"
+                  value={draftFilters.dateTo}
+                  onChange={(e) => setDraftFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+                  className="w-full h-10 px-3 text-xs rounded-xl border border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Action Buttons */}
+          <div className="flex items-center justify-between pt-4 border-t border-[var(--border-color)]">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={RotateCcw}
+              onClick={handleResetDraftFilters}
+              disabled={draftFilterCount === 0}
+              className="text-xs text-[var(--text-secondary)] hover:text-error"
+            >
+              Reset All
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsFilterModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleApplyFilters}
+              >
+                Apply Filters {draftFilterCount > 0 && `(${draftFilterCount})`}
+              </Button>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   )

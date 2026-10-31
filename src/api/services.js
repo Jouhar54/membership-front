@@ -540,6 +540,23 @@ export const applicationsApi = {
     return normaliseApplication(payload.application || payload)
   },
 
+  /** GET distinct districts from database */
+  getDistricts: async () => {
+    try {
+      const res = await apiClient.get('/admin/applications/districts')
+      const payload = unwrap(res)
+      return Array.isArray(payload?.districts) ? payload.districts : (Array.isArray(payload) ? payload : [])
+    } catch {
+      try {
+        const res = await apiClient.get('/applications/districts')
+        const payload = unwrap(res)
+        return Array.isArray(payload?.districts) ? payload.districts : (Array.isArray(payload) ? payload : [])
+      } catch {
+        return []
+      }
+    }
+  },
+
   /**
    * GET /admin/applications/all with pagination and filters
    * Query params: page, limit, search, status, membershipStatus, paymentStatus, batch, batchId, sortBy, sortOrder
@@ -615,4 +632,29 @@ export const applicationsApi = {
     const payload = unwrap(res)
     return normaliseApplication(payload.application || payload)
   },
+
+  /** GET /admin/members/export/pdf with filters (returns Blob) */
+  downloadMembersPdf: async (params = {}) => {
+    const res = await apiClient.get('/admin/members/export/pdf', {
+      params,
+      responseType: 'blob',
+      timeout: 60000,
+    })
+    return res.data
+  },
+
+  /** GET /admin/members/:id/export/pdf (returns Blob) */
+  downloadMemberPdf: async (id) => {
+    const res = await apiClient.get(`/admin/members/${id}/export/pdf`, {
+      responseType: 'blob',
+      timeout: 60000,
+    })
+    return res.data
+  },
+}
+
+// ─── Export API (dedicated namespace for downloads) ───────────────────────────
+export const exportApi = {
+  downloadMembersPdf: applicationsApi.downloadMembersPdf,
+  downloadMemberPdf: applicationsApi.downloadMemberPdf,
 }

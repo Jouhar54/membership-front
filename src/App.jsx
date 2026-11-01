@@ -6,7 +6,9 @@ import { ProtectedRoute, GuestRoute } from './routes/ProtectedRoute'
 import AuthLayout from './components/layout/AuthLayout'
 import DashboardLayout from './components/layout/DashboardLayout'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
+// RegisterPage code is preserved completely intact in src/pages/RegisterPage.jsx
+// import RegisterPage from './pages/RegisterPage'
+import RegistrationClosedPage from './pages/RegistrationClosedPage'
 import StatusCheckPage from './pages/StatusCheckPage'
 import StatusResultPage from './pages/StatusResultPage'
 import EditApplicationPage from './pages/EditApplicationPage'
@@ -37,7 +39,8 @@ export default function App() {
 
         {/* Public Membership Flow */}
         <Route element={<AuthLayout />}>
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register" element={<RegistrationClosedPage />} />
+          <Route path="/closed" element={<RegistrationClosedPage />} />
           <Route path="/edit-application/:id" element={<EditApplicationPage />} />
           <Route path="/status-check" element={<StatusCheckPage />} />
           <Route path="/status/:id" element={<StatusResultPage />} />

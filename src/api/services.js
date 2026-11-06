@@ -557,6 +557,33 @@ export const applicationsApi = {
     }
   },
 
+  /** GET distinct locations (districts, panchayaths, mandalams, taluks) from database */
+  getLocations: async (params = {}) => {
+    try {
+      const res = await apiClient.get('/admin/applications/locations', { params })
+      const payload = unwrap(res)
+      return {
+        districts: Array.isArray(payload?.districts) ? payload.districts : [],
+        panchayaths: Array.isArray(payload?.panchayaths) ? payload.panchayaths : [],
+        mandalams: Array.isArray(payload?.mandalams) ? payload.mandalams : [],
+        taluks: Array.isArray(payload?.taluks) ? payload.taluks : [],
+      }
+    } catch {
+      try {
+        const res = await apiClient.get('/applications/locations', { params })
+        const payload = unwrap(res)
+        return {
+          districts: Array.isArray(payload?.districts) ? payload.districts : [],
+          panchayaths: Array.isArray(payload?.panchayaths) ? payload.panchayaths : [],
+          mandalams: Array.isArray(payload?.mandalams) ? payload.mandalams : [],
+          taluks: Array.isArray(payload?.taluks) ? payload.taluks : [],
+        }
+      } catch {
+        return { districts: [], panchayaths: [], mandalams: [], taluks: [] }
+      }
+    }
+  },
+
   /**
    * GET /admin/applications/all with pagination and filters
    * Query params: page, limit, search, status, membershipStatus, paymentStatus, batch, batchId, sortBy, sortOrder

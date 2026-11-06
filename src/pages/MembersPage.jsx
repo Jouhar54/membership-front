@@ -37,6 +37,9 @@ export default function MembersPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [paymentFilter, setPaymentFilter] = useState('')
   const [districtFilter, setDistrictFilter] = useState('')
+  const [talukFilter, setTalukFilter] = useState('')
+  const [mandalamFilter, setMandalamFilter] = useState('')
+  const [panchayathFilter, setPanchayathFilter] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [sortSelection, setSortSelection] = useState('created-desc')
@@ -46,6 +49,9 @@ export default function MembersPage() {
     status: '',
     payment: '',
     district: '',
+    taluk: '',
+    mandalam: '',
+    panchayath: '',
     dateFrom: '',
     dateTo: '',
   })
@@ -62,9 +68,9 @@ export default function MembersPage() {
     queryFn: batchesApi.getAll,
   })
 
-  const { data: dbDistricts = [] } = useQuery({
-    queryKey: ['districts'],
-    queryFn: applicationsApi.getDistricts,
+  const { data: locationsData = { districts: [], panchayaths: [], mandalams: [], taluks: [] } } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => applicationsApi.getLocations(),
     staleTime: 5 * 60 * 1000,
   })
 
@@ -109,6 +115,16 @@ export default function MembersPage() {
     if (districtFilter && districtFilter !== 'all') {
       params.district = districtFilter
     }
+    if (talukFilter && talukFilter !== 'all') {
+      params.taluk = talukFilter
+      params.thaluk = talukFilter
+    }
+    if (mandalamFilter && mandalamFilter !== 'all') {
+      params.mandalam = mandalamFilter
+    }
+    if (panchayathFilter && panchayathFilter !== 'all') {
+      params.panchayath = panchayathFilter
+    }
     if (dateFrom) {
       params.startDate = dateFrom
     }
@@ -130,6 +146,9 @@ export default function MembersPage() {
     statusFilter,
     paymentFilter,
     districtFilter,
+    talukFilter,
+    mandalamFilter,
+    panchayathFilter,
     dateFrom,
     dateTo,
     sortBy,
@@ -144,11 +163,11 @@ export default function MembersPage() {
 
   const applications = data?.applications || []
 
-  // Merge dynamic districts from backend database + loaded applications + static standard DISTRICTS
+  // Merge dynamic locations from backend database + loaded applications + static standard DISTRICTS
   const districtList = useMemo(() => {
     const set = new Set(DISTRICTS)
-    if (Array.isArray(dbDistricts)) {
-      dbDistricts.forEach((d) => {
+    if (Array.isArray(locationsData?.districts)) {
+      locationsData.districts.forEach((d) => {
         if (d && typeof d === 'string' && d.trim()) set.add(d.trim())
       })
     }
@@ -160,7 +179,59 @@ export default function MembersPage() {
       })
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b))
-  }, [dbDistricts, applications])
+  }, [locationsData?.districts, applications])
+
+  const talukList = useMemo(() => {
+    const set = new Set()
+    if (Array.isArray(locationsData?.taluks)) {
+      locationsData.taluks.forEach((t) => {
+        if (t && typeof t === 'string' && t.trim()) set.add(t.trim())
+      })
+    }
+    if (Array.isArray(applications)) {
+      applications.forEach((app) => {
+        const val = app?.thaluk || app?.taluk
+        if (val && typeof val === 'string' && val.trim()) {
+          set.add(val.trim())
+        }
+      })
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [locationsData?.taluks, applications])
+
+  const mandalamList = useMemo(() => {
+    const set = new Set()
+    if (Array.isArray(locationsData?.mandalams)) {
+      locationsData.mandalams.forEach((m) => {
+        if (m && typeof m === 'string' && m.trim()) set.add(m.trim())
+      })
+    }
+    if (Array.isArray(applications)) {
+      applications.forEach((app) => {
+        if (app?.mandalam && typeof app.mandalam === 'string' && app.mandalam.trim()) {
+          set.add(app.mandalam.trim())
+        }
+      })
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [locationsData?.mandalams, applications])
+
+  const panchayathList = useMemo(() => {
+    const set = new Set()
+    if (Array.isArray(locationsData?.panchayaths)) {
+      locationsData.panchayaths.forEach((p) => {
+        if (p && typeof p === 'string' && p.trim()) set.add(p.trim())
+      })
+    }
+    if (Array.isArray(applications)) {
+      applications.forEach((app) => {
+        if (app?.panchayath && typeof app.panchayath === 'string' && app.panchayath.trim()) {
+          set.add(app.panchayath.trim())
+        }
+      })
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [locationsData?.panchayaths, applications])
   const total = data?.total ?? 0
   const totalPages = data?.totalPages ?? 1
   const pagination = data?.pagination ?? {
@@ -256,6 +327,16 @@ export default function MembersPage() {
       if (districtFilter && districtFilter !== 'all') {
         exportParams.district = districtFilter
       }
+      if (talukFilter && talukFilter !== 'all') {
+        exportParams.taluk = talukFilter
+        exportParams.thaluk = talukFilter
+      }
+      if (mandalamFilter && mandalamFilter !== 'all') {
+        exportParams.mandalam = mandalamFilter
+      }
+      if (panchayathFilter && panchayathFilter !== 'all') {
+        exportParams.panchayath = panchayathFilter
+      }
       if (dateFrom) exportParams.startDate = dateFrom
       if (dateTo) exportParams.endDate = dateTo
       if (sortBy) exportParams.sortBy = sortBy
@@ -301,6 +382,9 @@ export default function MembersPage() {
     statusFilter ||
     paymentFilter ||
     districtFilter ||
+    talukFilter ||
+    mandalamFilter ||
+    panchayathFilter ||
     dateFrom ||
     dateTo ||
     sortSelection !== 'created-desc' ||
@@ -313,9 +397,12 @@ export default function MembersPage() {
     if (statusFilter) count++
     if (paymentFilter) count++
     if (districtFilter) count++
+    if (talukFilter) count++
+    if (mandalamFilter) count++
+    if (panchayathFilter) count++
     if (dateFrom || dateTo) count++
     return count
-  }, [isBatchAdmin, batchFilter, statusFilter, paymentFilter, districtFilter, dateFrom, dateTo])
+  }, [isBatchAdmin, batchFilter, statusFilter, paymentFilter, districtFilter, talukFilter, mandalamFilter, panchayathFilter, dateFrom, dateTo])
 
   const draftFilterCount = useMemo(() => {
     let count = 0
@@ -323,6 +410,9 @@ export default function MembersPage() {
     if (draftFilters.status) count++
     if (draftFilters.payment) count++
     if (draftFilters.district) count++
+    if (draftFilters.taluk) count++
+    if (draftFilters.mandalam) count++
+    if (draftFilters.panchayath) count++
     if (draftFilters.dateFrom || draftFilters.dateTo) count++
     return count
   }, [isBatchAdmin, draftFilters])
@@ -333,6 +423,9 @@ export default function MembersPage() {
       status: statusFilter,
       payment: paymentFilter,
       district: districtFilter,
+      taluk: talukFilter,
+      mandalam: mandalamFilter,
+      panchayath: panchayathFilter,
       dateFrom,
       dateTo,
     })
@@ -344,6 +437,9 @@ export default function MembersPage() {
     setStatusFilter(draftFilters.status)
     setPaymentFilter(draftFilters.payment)
     setDistrictFilter(draftFilters.district)
+    setTalukFilter(draftFilters.taluk)
+    setMandalamFilter(draftFilters.mandalam)
+    setPanchayathFilter(draftFilters.panchayath)
     setDateFrom(draftFilters.dateFrom)
     setDateTo(draftFilters.dateTo)
     setPage(1)
@@ -356,6 +452,9 @@ export default function MembersPage() {
       status: '',
       payment: '',
       district: '',
+      taluk: '',
+      mandalam: '',
+      panchayath: '',
       dateFrom: '',
       dateTo: '',
     })
@@ -367,6 +466,9 @@ export default function MembersPage() {
     setStatusFilter('')
     setPaymentFilter('')
     setDistrictFilter('')
+    setTalukFilter('')
+    setMandalamFilter('')
+    setPanchayathFilter('')
     setDateFrom('')
     setDateTo('')
     setDraftFilters({
@@ -374,6 +476,9 @@ export default function MembersPage() {
       status: '',
       payment: '',
       district: '',
+      taluk: '',
+      mandalam: '',
+      panchayath: '',
       dateFrom: '',
       dateTo: '',
     })
@@ -726,6 +831,54 @@ export default function MembersPage() {
                 </span>
               )}
 
+              {talukFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                  <span>Taluk: {talukFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTalukFilter('')
+                      setPage(1)
+                    }}
+                    className="hover:text-primary-900 dark:hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {mandalamFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                  <span>Mandalam: {mandalamFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMandalamFilter('')
+                      setPage(1)
+                    }}
+                    className="hover:text-primary-900 dark:hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {panchayathFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                  <span>Panchayath: {panchayathFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPanchayathFilter('')
+                      setPage(1)
+                    }}
+                    className="hover:text-primary-900 dark:hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
               {(dateFrom || dateTo) && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
                   <span>Date: {dateFrom || '...'} to {dateTo || '...'}</span>
@@ -750,6 +903,9 @@ export default function MembersPage() {
                   setStatusFilter('')
                   setPaymentFilter('')
                   setDistrictFilter('')
+                  setTalukFilter('')
+                  setMandalamFilter('')
+                  setPanchayathFilter('')
                   setDateFrom('')
                   setDateTo('')
                   setPage(1)
@@ -1171,7 +1327,7 @@ export default function MembersPage() {
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         title="Filter Applications"
-        size="lg"
+        size="xl"
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -1229,6 +1385,42 @@ export default function MembersPage() {
                 options={districtList.map((d) => ({ value: d, label: d }))}
                 value={draftFilters.district}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, district: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
+                Taluk
+              </label>
+              <Select
+                placeholder="All Taluks"
+                options={talukList.map((t) => ({ value: t, label: t }))}
+                value={draftFilters.taluk}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, taluk: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
+                Mandalam
+              </label>
+              <Select
+                placeholder="All Mandalams"
+                options={mandalamList.map((m) => ({ value: m, label: m }))}
+                value={draftFilters.mandalam}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, mandalam: e.target.value }))}
+              />
+            </div>
+
+            <div className={!isBatchAdmin ? 'sm:col-span-2' : ''}>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wider">
+                Panchayath
+              </label>
+              <Select
+                placeholder="All Panchayaths"
+                options={panchayathList.map((p) => ({ value: p, label: p }))}
+                value={draftFilters.panchayath}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, panchayath: e.target.value }))}
               />
             </div>
           </div>

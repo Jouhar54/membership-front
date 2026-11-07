@@ -22,8 +22,45 @@ import Modal from '../components/ui/Modal'
 import RejectReasonModal from '../components/ui/RejectReasonModal'
 import { PageLoader } from '../components/ui/LoadingStates'
 import { DISTRICTS } from '../constants'
+import { findCanonicalLocation } from '../constants/keralaLocations'
 import { formatPhone, formatDate, cn, showApiErrorToast, downloadBlob, extractBlobErrorMessage } from '../utils'
 import toast from 'react-hot-toast'
+
+const toTitleCase = (str) => {
+  if (!str || typeof str !== 'string') return ''
+  const trimmed = str.trim()
+  if (/[a-zA-Z]/.test(trimmed)) {
+    return trimmed
+      .toLowerCase()
+      .split(/\s+/)
+      .map((word) => {
+        if (!word) return ''
+        if (word.includes('-')) {
+          return word
+            .split('-')
+            .map((sub) => sub.charAt(0).toUpperCase() + sub.slice(1))
+            .join('-')
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1)
+      })
+      .join(' ')
+  }
+  return trimmed
+}
+
+const normalizeLocationList = (items = []) => {
+  const map = new Map()
+  items.forEach((item) => {
+    if (item && typeof item === 'string' && item.trim()) {
+      const trimmed = item.trim()
+      const key = trimmed.toLowerCase()
+      if (!map.has(key)) {
+        map.set(key, toTitleCase(trimmed))
+      }
+    }
+  })
+  return Array.from(map.values()).sort((a, b) => a.localeCompare(b))
+}
 
 export default function MembersPage() {
   const navigate = useNavigate()
@@ -164,73 +201,101 @@ export default function MembersPage() {
   const applications = data?.applications || []
 
   // Merge dynamic locations from backend database + loaded applications + static standard DISTRICTS
-  const districtList = useMemo(() => {
-    const set = new Set(DISTRICTS)
+  const districtOptions = useMemo(() => {
+    const raw = [...DISTRICTS]
     if (Array.isArray(locationsData?.districts)) {
-      locationsData.districts.forEach((d) => {
-        if (d && typeof d === 'string' && d.trim()) set.add(d.trim())
-      })
+      raw.push(...locationsData.districts)
     }
     if (Array.isArray(applications)) {
       applications.forEach((app) => {
-        if (app?.district && typeof app.district === 'string' && app.district.trim()) {
-          set.add(app.district.trim())
-        }
+        if (app?.district) raw.push(app.district)
       })
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b))
+    const map = new Map()
+    raw.forEach((item) => {
+      if (item && typeof item === 'string' && item.trim()) {
+        const canonical = findCanonicalLocation('district', item)
+        if (canonical) {
+          const key = canonical.en.toLowerCase()
+          if (!map.has(key)) {
+            map.set(key, {
+              value: canonical.en,
+              label: `${canonical.en} (${canonical.ml})`,
+            })
+          }
+        } else {
+          const trimmed = item.trim()
+          const key = trimmed.toLowerCase()
+          if (!map.has(key)) {
+            const formatted = toTitleCase(trimmed)
+            map.set(key, { value: formatted, label: formatted })
+          }
+        }
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label))
   }, [locationsData?.districts, applications])
 
-  const talukList = useMemo(() => {
-    const set = new Set()
+  const talukOptions = useMemo(() => {
+    const raw = []
     if (Array.isArray(locationsData?.taluks)) {
-      locationsData.taluks.forEach((t) => {
-        if (t && typeof t === 'string' && t.trim()) set.add(t.trim())
-      })
+      raw.push(...locationsData.taluks)
     }
     if (Array.isArray(applications)) {
       applications.forEach((app) => {
         const val = app?.thaluk || app?.taluk
-        if (val && typeof val === 'string' && val.trim()) {
-          set.add(val.trim())
-        }
+        if (val) raw.push(val)
       })
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b))
+    const map = new Map()
+    raw.forEach((item) => {
+      if (item && typeof item === 'string' && item.trim()) {
+        const canonical = findCanonicalLocation('taluk', item)
+        if (canonical) {
+          const key = canonical.en.toLowerCase()
+          if (!map.has(key)) {
+            map.set(key, {
+              value: canonical.en,
+              label: `${canonical.en} (${canonical.ml})`,
+            })
+          }
+        } else {
+          const trimmed = item.trim()
+          const key = trimmed.toLowerCase()
+          if (!map.has(key)) {
+            const formatted = toTitleCase(trimmed)
+            map.set(key, { value: formatted, label: formatted })
+          }
+        }
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label))
   }, [locationsData?.taluks, applications])
 
   const mandalamList = useMemo(() => {
-    const set = new Set()
+    const raw = []
     if (Array.isArray(locationsData?.mandalams)) {
-      locationsData.mandalams.forEach((m) => {
-        if (m && typeof m === 'string' && m.trim()) set.add(m.trim())
-      })
+      raw.push(...locationsData.mandalams)
     }
     if (Array.isArray(applications)) {
       applications.forEach((app) => {
-        if (app?.mandalam && typeof app.mandalam === 'string' && app.mandalam.trim()) {
-          set.add(app.mandalam.trim())
-        }
+        if (app?.mandalam) raw.push(app.mandalam)
       })
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b))
+    return normalizeLocationList(raw)
   }, [locationsData?.mandalams, applications])
 
   const panchayathList = useMemo(() => {
-    const set = new Set()
+    const raw = []
     if (Array.isArray(locationsData?.panchayaths)) {
-      locationsData.panchayaths.forEach((p) => {
-        if (p && typeof p === 'string' && p.trim()) set.add(p.trim())
-      })
+      raw.push(...locationsData.panchayaths)
     }
     if (Array.isArray(applications)) {
       applications.forEach((app) => {
-        if (app?.panchayath && typeof app.panchayath === 'string' && app.panchayath.trim()) {
-          set.add(app.panchayath.trim())
-        }
+        if (app?.panchayath) raw.push(app.panchayath)
       })
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b))
+    return normalizeLocationList(raw)
   }, [locationsData?.panchayaths, applications])
   const total = data?.total ?? 0
   const totalPages = data?.totalPages ?? 1
@@ -817,7 +882,7 @@ export default function MembersPage() {
 
               {districtFilter && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
-                  <span>District: {districtFilter}</span>
+                  <span>District: {districtOptions.find((o) => o.value === districtFilter)?.label || districtFilter}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -833,7 +898,7 @@ export default function MembersPage() {
 
               {talukFilter && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
-                  <span>Taluk: {talukFilter}</span>
+                  <span>Taluk: {talukOptions.find((o) => o.value === talukFilter)?.label || talukFilter}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -1382,7 +1447,7 @@ export default function MembersPage() {
               </label>
               <Select
                 placeholder="All Districts"
-                options={districtList.map((d) => ({ value: d, label: d }))}
+                options={districtOptions}
                 value={draftFilters.district}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, district: e.target.value }))}
               />
@@ -1394,7 +1459,7 @@ export default function MembersPage() {
               </label>
               <Select
                 placeholder="All Taluks"
-                options={talukList.map((t) => ({ value: t, label: t }))}
+                options={talukOptions}
                 value={draftFilters.taluk}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, taluk: e.target.value }))}
               />

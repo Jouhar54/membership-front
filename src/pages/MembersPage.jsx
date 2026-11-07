@@ -272,7 +272,7 @@ export default function MembersPage() {
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label))
   }, [locationsData?.taluks, applications])
 
-  const mandalamList = useMemo(() => {
+  const mandalamOptions = useMemo(() => {
     const raw = []
     if (Array.isArray(locationsData?.mandalams)) {
       raw.push(...locationsData.mandalams)
@@ -282,7 +282,29 @@ export default function MembersPage() {
         if (app?.mandalam) raw.push(app.mandalam)
       })
     }
-    return normalizeLocationList(raw)
+    const map = new Map()
+    raw.forEach((item) => {
+      if (item && typeof item === 'string' && item.trim()) {
+        const canonical = findCanonicalLocation('mandalam', item)
+        if (canonical) {
+          const key = canonical.en.toLowerCase()
+          if (!map.has(key)) {
+            map.set(key, {
+              value: canonical.en,
+              label: `${canonical.en} (${canonical.ml})`,
+            })
+          }
+        } else {
+          const trimmed = item.trim()
+          const key = trimmed.toLowerCase()
+          if (!map.has(key)) {
+            const formatted = toTitleCase(trimmed)
+            map.set(key, { value: formatted, label: formatted })
+          }
+        }
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label))
   }, [locationsData?.mandalams, applications])
 
   const panchayathList = useMemo(() => {
@@ -914,7 +936,7 @@ export default function MembersPage() {
 
               {mandalamFilter && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
-                  <span>Mandalam: {mandalamFilter}</span>
+                  <span>Mandalam: {mandalamOptions.find((o) => o.value === mandalamFilter)?.label || mandalamFilter}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -1471,7 +1493,7 @@ export default function MembersPage() {
               </label>
               <Select
                 placeholder="All Mandalams"
-                options={mandalamList.map((m) => ({ value: m, label: m }))}
+                options={mandalamOptions}
                 value={draftFilters.mandalam}
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, mandalam: e.target.value }))}
               />
